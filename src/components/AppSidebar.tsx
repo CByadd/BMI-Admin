@@ -14,6 +14,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
   { title: "Dashboard", url: "/dashboard", icon: Activity },
@@ -25,10 +27,16 @@ const navigationItems = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const { logout } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogout = () => {
-    localStorage.removeItem("bmi_remember");
+    logout();
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out",
+    });
     navigate("/");
   };
 

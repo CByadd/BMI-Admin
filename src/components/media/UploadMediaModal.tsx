@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, X, FileVideo, FileImage } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Upload, X, FileVideo, FileImage, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 interface UploadMediaModalProps {
   open: boolean;
@@ -13,10 +14,12 @@ interface UploadMediaModalProps {
 }
 
 export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: UploadMediaModalProps) => {
+  const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -74,7 +77,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     return true;
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) {
       toast({
         title: "No files selected",
@@ -86,18 +89,38 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
 
     if (!validateFiles()) return;
 
-    // Simulate upload
-    toast({
-      title: "Upload successful",
-      description: "Your media has been uploaded successfully!",
-    });
+    setUploading(true);
+    try {
+      // Upload each file
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (name) formData.append('name', name);
+        if (tags) formData.append('tags', tags);
 
-    // Reset form
-    setFiles([]);
-    setName("");
-    setTags("");
-    onUploadSuccess();
-    onOpenChange(false);
+        await api.uploadMedia(formData);
+      }
+
+      toast({
+        title: "Upload successful",
+        description: "Your media has been uploaded successfully!",
+      });
+
+      // Reset form
+      setFiles([]);
+      setName("");
+      setTags("");
+      onUploadSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload media. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const getFileIcon = (file: File) => {
@@ -210,11 +233,25 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={uploading}
+          >
             Cancel
           </Button>
-          <Button onClick={handleUpload}>
-            Upload & Save
+          <Button 
+            onClick={handleUpload}
+            disabled={uploading || files.length === 0}
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              'Upload & Save'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

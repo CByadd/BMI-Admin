@@ -1,74 +1,169 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Download, Filter, Eye } from "lucide-react";
+import { Plus, Search, Download, Filter, Eye, Loader2 } from "lucide-react";
 import ScreenEmptyState from "@/components/screens/ScreenEmptyState";
 import ConnectScreenModal from "@/components/screens/ConnectScreenModal";
 import ScreenCard from "@/components/screens/ScreenCard";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
-const initialScreens = [
-  {
-    id: "BMI-001",
-    name: "Main Lobby - Floor 1",
-    model: "Flow 1 - 32\" Display",
-    status: "online" as const,
-    location: "San Francisco, CA",
-    lastSync: "2 mins ago",
-    todayUsers: 45,
-    totalUsers: 1234,
-  },
-  {
-    id: "BMI-002",
-    name: "Fitness Center - Floor 2",
-    model: "Flow 2 - 43\" Display",
-    status: "online" as const,
-    location: "San Francisco, CA",
-    lastSync: "5 mins ago",
-    todayUsers: 38,
-    totalUsers: 987,
-  },
-  {
-    id: "BMI-003",
-    name: "Health Clinic - Floor 3",
-    model: "Flow 1 - 32\" Display",
-    status: "offline" as const,
-    location: "San Francisco, CA",
-    lastSync: "2 hours ago",
-    todayUsers: 0,
-    totalUsers: 756,
-  },
-  {
-    id: "BMI-004",
-    name: "Employee Cafeteria",
-    model: "Flow 2 - 43\" Display",
-    status: "maintenance" as const,
-    location: "San Francisco, CA",
-    lastSync: "1 day ago",
-    todayUsers: 0,
-    totalUsers: 543,
-  },
-];
+interface Screen {
+  id: string;
+  name: string;
+  model: string;
+  status: "online" | "offline" | "maintenance";
+  location: string;
+  lastSync: string;
+  todayUsers: number;
+  totalUsers: number;
+  flowType: string | null;
+}
 
 const Screens = () => {
-  const [screens, setScreens] = useState(initialScreens);
+  const [screens, setScreens] = useState<Screen[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showEmptyState, setShowEmptyState] = useState(false);
+  const { toast } = useToast();
 
-  const handleConnectScreen = (newScreen: any) => {
-    setScreens([...screens, { ...newScreen, todayUsers: 0, totalUsers: 0 }]);
+  useEffect(() => {
+    fetchScreens();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchScreens, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchScreens = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAllPlayers() as { ok: boolean; players: any[] };
+      
+      if (response.ok && response.players) {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        
+        const screensData: Screen[] = response.players.map((player) => {
+          const lastSeen = new Date(player.lastSeen);
+          const isOnline = player.isActive && lastSeen >= fiveMinutesAgo;
+          const isOffline = !player.isActive || lastSeen < oneDayAgo;
+          
+          let status: "online" | "offline" | "maintenance" = "offline";
+          if (isOnline) {
+            status = "online";
+          } else if (isOffline) {
+            status = "offline";
+          } else {
+            status = "maintenance";
+          }
+
+          // Calculate time ago
+          const timeDiff = Date.now() - lastSeen.getTime();
+          const minutesAgo = Math.floor(timeDiff / (1000 * 60));
+          const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
+          const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+          
+          let lastSync = "";
+          if (minutesAgo < 60) {
+            lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
+          } else if (hoursAgo < 24) {
+            lastSync = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
+          } else {
+            lastSync = `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
+          }
+
+          const flowType = player.flowType;
+          const flowTypeLabel = flowType || "Normal";
+          const model = `Flow ${flowTypeLabel} - ${player.screenWidth || 'Unknown'}x${player.screenHeight || 'Unknown'} Display`;
+
+          return {
+            id: player.screenId,
+            name: player.deviceName || player.screenId,
+            model,
+            status,
+            location: player.location || "Unknown Location",
+            lastSync,
+            todayUsers: 0, // TODO: Add API endpoint for today's BMI count per screen
+            totalUsers: 0, // TODO: Add API endpoint for total BMI count per screen
+            flowType: flowType,
+          };
+        });
+        
+        setScreens(screensData);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching screens:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load screens",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
   };
 
-  const handleEditScreen = (updatedScreen: any) => {
-    setScreens(screens.map(s => s.id === updatedScreen.id ? updatedScreen : s));
+  const handleConnectScreen = async (newScreen: any) => {
+    try {
+      // Refresh the list to show the newly connected screen
+      await fetchScreens();
+      // Toast is already shown in ConnectScreenModal
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh screen list",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteScreen = (screenId: string) => {
-    setScreens(screens.filter(s => s.id !== screenId));
+  const handleEditScreen = (updatedScreen: Screen) => {
+    // TODO: Implement edit functionality
+    toast({
+      title: "Info",
+      description: "Edit functionality coming soon",
+    });
+  };
+
+  const handleFlowTypeChange = async (screenId: string, flowType: string) => {
+    try {
+      await api.updateFlowType(screenId, flowType);
+      toast({
+        title: "Success",
+        description: `Flow type updated to ${flowType}`,
+      });
+      // Refresh screens to show updated flow type
+      await fetchScreens();
+    } catch (error) {
+      console.error('Error updating flow type:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update flow type",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteScreen = async (screenId: string) => {
+    try {
+      await api.deletePlayer(screenId);
+      toast({
+        title: "Success",
+        description: "Screen deleted successfully",
+      });
+      await fetchScreens();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete screen",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredScreens = screens.filter((screen) => {
@@ -78,7 +173,17 @@ const Screens = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const hasScreens = !showEmptyState && screens.length > 0;
+  const hasScreens = !showEmptyState && !loading && screens.length > 0;
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -183,6 +288,7 @@ const Screens = () => {
                   screen={screen}
                   onEdit={handleEditScreen}
                   onDelete={handleDeleteScreen}
+                  onFlowTypeChange={handleFlowTypeChange}
                 />
               ))}
             </div>

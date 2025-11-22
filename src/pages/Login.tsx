@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,14 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Activity } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,27 +48,22 @@ const Login = () => {
 
     setIsLoading(true);
 
-    // Simulate API call - replace with actual auth later
-    setTimeout(() => {
-      // Demo credentials
-      if (email === "admin@bmi.com" && password === "admin123") {
-        if (rememberMe) {
-          localStorage.setItem("bmi_remember", "true");
-        }
-        toast({
-          title: "Login Successful",
-          description: "Welcome back to BMI Admin Panel",
-        });
-        navigate("/dashboard");
-      } else {
-        toast({
-          title: "Login Failed",
-          description: "Invalid credentials. Try admin@bmi.com / admin123",
-          variant: "destructive",
-        });
-      }
+    try {
+      await login(email, password, rememberMe);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to BMI Admin Panel",
+      });
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Try admin@bmi.com / admin123",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleForgotPassword = () => {

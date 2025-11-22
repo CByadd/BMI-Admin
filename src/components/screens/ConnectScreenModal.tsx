@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { CheckCircle2, Loader2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 interface ConnectScreenModalProps {
   open: boolean;
@@ -16,93 +17,153 @@ interface ConnectScreenModalProps {
 
 const ConnectScreenModal = ({ open, onOpenChange, onConnect }: ConnectScreenModalProps) => {
   const { toast } = useToast();
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isFound, setIsFound] = useState(false);
+  const [registrationCode, setRegistrationCode] = useState("");
   const [formData, setFormData] = useState({
     screenId: "",
-    screenName: "",
-    model: "",
-    latitude: "",
-    longitude: "",
-    flow: "",
-    notes: "",
+    name: "",
+    address: "",
+    location: "",
+    flowType: "",
+    isEnabled: true,
+    screenWidth: 0,
+    screenHeight: 0,
   });
 
-  const handleVerify = () => {
-    if (!formData.screenId) {
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!open) {
+      setRegistrationCode("");
+      setIsFound(false);
+      setFormData({
+        screenId: "",
+        name: "",
+        address: "",
+        location: "",
+        flowType: "",
+        isEnabled: true,
+        screenWidth: 0,
+        screenHeight: 0,
+      });
+    }
+  }, [open]);
+
+  const handleSearch = async () => {
+    if (!registrationCode || registrationCode.length !== 8) {
       toast({
         title: "Validation Error",
-        description: "Please enter a Screen ID",
+        description: "Please enter a valid 8-digit registration code",
         variant: "destructive",
       });
       return;
     }
 
-    setIsVerifying(true);
-    // Simulate API verification
-    setTimeout(() => {
-      setIsVerifying(false);
-      setIsVerified(true);
+    setIsSearching(true);
+    try {
+      const response = await api.getPlayerByCode(registrationCode) as { ok: boolean; player: any };
+      
+      if (response.ok && response.player) {
+        const player = response.player;
+        setFormData({
+          screenId: player.screenId,
+          name: player.name || player.deviceName || "",
+          address: player.address || "",
+          location: player.location || "",
+          flowType: player.flowType || "Normal",
+          isEnabled: player.isEnabled !== undefined ? player.isEnabled : true,
+          screenWidth: player.screenWidth || 0,
+          screenHeight: player.screenHeight || 0,
+        });
+        setIsFound(true);
+        toast({
+          title: "Screen Found",
+          description: `Screen ${player.screenId} found. Screen size: ${player.screenWidth || 'Unknown'}x${player.screenHeight || 'Unknown'}`,
+        });
+      } else {
+        throw new Error("Screen not found");
+      }
+    } catch (error: any) {
       toast({
-        title: "Screen ID Verified",
-        description: "Screen ID exists in the system registry",
+        title: "Screen Not Found",
+        description: error.message || "No screen found with this registration code. Make sure the app is running and has generated a code.",
+        variant: "destructive",
       });
-    }, 1500);
+      setIsFound(false);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     // Validate required fields
-    if (!formData.screenId || !formData.screenName || !formData.model || !formData.flow) {
+    if (!formData.name || !formData.location || !formData.flowType) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Name, Location, Flow Type)",
         variant: "destructive",
       });
       return;
     }
 
-    if (!isVerified) {
+    if (!isFound) {
       toast({
-        title: "Verification Required",
-        description: "Please verify the Screen ID first",
+        title: "Search Required",
+        description: "Please search for a screen using the registration code first",
         variant: "destructive",
       });
       return;
     }
 
-    // Create screen data
-    const newScreen = {
-      id: formData.screenId,
-      name: formData.screenName,
-      model: formData.model,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      flow: formData.flow,
-      notes: formData.notes,
-      status: "online",
-      lastSync: "Just now",
-      connectedAt: new Date().toISOString(),
-    };
+    try {
+      // Update screen configuration
+      await api.updateScreenConfig(formData.screenId, {
+        name: formData.name,
+        address: formData.address,
+        location: formData.location,
+        flowType: formData.flowType === "Normal" ? "" : formData.flowType,
+        isEnabled: formData.isEnabled,
+      });
 
-    onConnect(newScreen);
-    
-    toast({
-      title: "Screen Connected Successfully",
-      description: `${formData.screenName} is now connected and monitoring`,
-    });
+      const newScreen = {
+        id: formData.screenId,
+        name: formData.name,
+        model: `Flow ${formData.flowType || 'Normal'} - ${formData.screenWidth}x${formData.screenHeight} Display`,
+        status: "online",
+        lastSync: "Just now",
+        connectedAt: new Date().toISOString(),
+        flowType: formData.flowType,
+        isEnabled: formData.isEnabled,
+      };
 
-    // Reset form
-    setFormData({
-      screenId: "",
-      screenName: "",
-      model: "",
-      latitude: "",
-      longitude: "",
-      flow: "",
-      notes: "",
-    });
-    setIsVerified(false);
-    onOpenChange(false);
+      onConnect(newScreen);
+      
+      toast({
+        title: "Screen Connected Successfully",
+        description: `${formData.name} is now connected and configured`,
+      });
+
+      // Reset form
+      setRegistrationCode("");
+      setIsFound(false);
+      setFormData({
+        screenId: "",
+        name: "",
+        address: "",
+        location: "",
+        flowType: "",
+        isEnabled: true,
+        screenWidth: 0,
+        screenHeight: 0,
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to connect screen",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -111,137 +172,171 @@ const ConnectScreenModal = ({ open, onOpenChange, onConnect }: ConnectScreenModa
         <DialogHeader>
           <DialogTitle>Connect New Screen</DialogTitle>
           <DialogDescription>
-            Enter the screen details to connect a new BMI kiosk to the system
+            Enter the 8-digit registration code from the app to connect a new screen
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Screen ID with Verify */}
+          {/* Registration Code Search */}
           <div className="space-y-2">
-            <Label htmlFor="screenId">
-              Screen ID <span className="text-danger">*</span>
+            <Label htmlFor="registrationCode">
+              Registration Code (8 digits) <span className="text-danger">*</span>
             </Label>
             <div className="flex gap-2">
               <Input
-                id="screenId"
-                placeholder="e.g., BMI-005"
-                value={formData.screenId}
-                onChange={(e) => setFormData({ ...formData, screenId: e.target.value })}
-                disabled={isVerified}
+                id="registrationCode"
+                placeholder="Enter 8-digit code"
+                value={registrationCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  setRegistrationCode(value);
+                  if (value.length !== 8) {
+                    setIsFound(false);
+                  }
+                }}
+                disabled={isSearching || isFound}
+                maxLength={8}
+                className="font-mono text-lg tracking-wider"
               />
               <Button
-                onClick={handleVerify}
-                disabled={isVerifying || isVerified}
-                variant={isVerified ? "default" : "outline"}
-                className="min-w-[100px]"
+                onClick={handleSearch}
+                disabled={isSearching || isFound || registrationCode.length !== 8}
+                variant={isFound ? "default" : "outline"}
+                className="min-w-[120px]"
               >
-                {isVerifying ? (
+                {isSearching ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Verifying
+                    Searching
                   </>
-                ) : isVerified ? (
+                ) : isFound ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Verified
+                    Found
                   </>
                 ) : (
-                  "Verify"
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    Search
+                  </>
                 )}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Unique screen identifier provided by hardware or IoT system
+              Enter the 8-digit code displayed on the app screen. The screen size will be automatically detected.
             </p>
           </div>
 
-          {/* Screen Name */}
-          <div className="space-y-2">
-            <Label htmlFor="screenName">
-              Screen Name <span className="text-danger">*</span>
-            </Label>
-            <Input
-              id="screenName"
-              placeholder="e.g., Well2Day Gym Entrance"
-              value={formData.screenName}
-              onChange={(e) => setFormData({ ...formData, screenName: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Custom name for easy identification
-            </p>
-          </div>
+          {isFound && (
+            <>
+              {/* Screen Info (Read-only) */}
+              <div className="p-4 bg-muted/50 rounded-lg border border-border space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Screen ID:</span>
+                    <p className="font-mono font-semibold">{formData.screenId}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Screen Size:</span>
+                    <p className="font-semibold">
+                      {formData.screenWidth && formData.screenHeight
+                        ? `${formData.screenWidth} × ${formData.screenHeight}`
+                        : "Unknown"}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          {/* Model Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="model">
-              Select Model <span className="text-danger">*</span>
-            </Label>
-            <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose model type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flow1-32">Flow 1 - 32" Display</SelectItem>
-                <SelectItem value="flow1-43">Flow 1 - 43" Display</SelectItem>
-                <SelectItem value="flow2-32">Flow 2 - 32" Display</SelectItem>
-                <SelectItem value="flow2-43">Flow 2 - 43" Display</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Screen Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Screen Name <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Well2Day Gym Entrance"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Custom name for easy identification
+                </p>
+              </div>
 
-          {/* Location Coordinates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude</Label>
-              <Input
-                id="latitude"
-                type="number"
-                step="any"
-                placeholder="e.g., 37.7749"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="longitude">Longitude</Label>
-              <Input
-                id="longitude"
-                type="number"
-                step="any"
-                placeholder="e.g., -122.4194"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-              />
-            </div>
-          </div>
+              {/* Address */}
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="e.g., 123 Main Street, City, State"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Physical address of the screen location
+                </p>
+              </div>
 
-          {/* Flow Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="flow">
-              Select Flow <span className="text-danger">*</span>
-            </Label>
-            <Select value={formData.flow} onValueChange={(value) => setFormData({ ...formData, flow: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose operational flow" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flow1">Flow 1 - Standard Measurement</SelectItem>
-                <SelectItem value="flow2">Flow 2 - Enhanced Analytics</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Location */}
+              <div className="space-y-2">
+                <Label htmlFor="location">
+                  Location <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="location"
+                  placeholder="e.g., Gym Entrance, Lobby, Reception"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Location description within the venue
+                </p>
+              </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Add Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Admin notes, maintenance info, or remarks..."
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </div>
+              {/* Flow Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="flowType">
+                  Flow Type <span className="text-danger">*</span>
+                </Label>
+                <Select 
+                  value={formData.flowType} 
+                  onValueChange={(value) => setFormData({ ...formData, flowType: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose operational flow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Normal">Normal - Standard Player</SelectItem>
+                    <SelectItem value="F1">Flow 1 - Standard Measurement</SelectItem>
+                    <SelectItem value="F2">Flow 2 - Enhanced Analytics</SelectItem>
+                    <SelectItem value="F3">Flow 3 - Advanced Features</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the operational flow type for this screen
+                </p>
+              </div>
+
+              {/* Enable/Disable Toggle */}
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isEnabled" className="text-base font-medium">
+                    Enable Screen
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.isEnabled 
+                      ? "Screen is enabled and will show ads" 
+                      : "Screen is disabled and will only show default asset"}
+                  </p>
+                </div>
+                <Switch
+                  id="isEnabled"
+                  checked={formData.isEnabled}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isEnabled: checked })}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex gap-3 justify-end pt-4 border-t border-border">
@@ -250,6 +345,7 @@ const ConnectScreenModal = ({ open, onOpenChange, onConnect }: ConnectScreenModa
           </Button>
           <Button 
             onClick={handleConnect}
+            disabled={!isFound}
             className="bg-gradient-primary hover:opacity-90"
           >
             Connect Screen

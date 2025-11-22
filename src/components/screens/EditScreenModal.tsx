@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 interface EditScreenModalProps {
   open: boolean;
@@ -14,22 +17,89 @@ interface EditScreenModalProps {
     model: string;
     status: "online" | "offline" | "maintenance";
     location?: string;
+    flowType?: string | null;
   };
   onSave: (updatedScreen: any) => void;
 }
 
 const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModalProps) => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: screen.name,
-    model: screen.model,
-    status: screen.status,
+    address: "",
     location: screen.location || "",
+    flowType: screen.flowType || "Normal",
+    isEnabled: true,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch current screen data when modal opens
+  useEffect(() => {
+    if (open && screen.id) {
+      fetchScreenData();
+    }
+  }, [open, screen.id]);
+
+  const fetchScreenData = async () => {
+    try {
+      const response = await api.getPlayer(screen.id) as { ok: boolean; player: any };
+      if (response.ok && response.player) {
+        setFormData({
+          name: response.player.name || response.player.deviceName || screen.name,
+          address: response.player.address || "",
+          location: response.player.location || screen.location || "",
+          flowType: response.player.flowType || "Normal",
+          isEnabled: response.player.isEnabled !== undefined ? response.player.isEnabled : true,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching screen data:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...screen, ...formData });
-    onOpenChange(false);
+    
+    if (!formData.name || !formData.location) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (Name, Location)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.updateScreenConfig(screen.id, {
+        name: formData.name,
+        address: formData.address,
+        location: formData.location,
+        flowType: formData.flowType === "Normal" ? "" : formData.flowType,
+        isEnabled: formData.isEnabled,
+      });
+
+      toast({
+        title: "Success",
+        description: "Screen configuration updated successfully",
+      });
+
+      onSave({ 
+        ...screen, 
+        name: formData.name,
+        location: formData.location,
+        flowType: formData.flowType,
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update screen configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -41,7 +111,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Screen Name</Label>
+              <Label htmlFor="name">
+                Screen Name <span className="text-danger">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -50,47 +122,75 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 required
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Flow 1 - 32&quot; Display">Flow 1 - 32&quot; Display</SelectItem>
-                  <SelectItem value="Flow 2 - 43&quot; Display">Flow 2 - 43&quot; Display</SelectItem>
-                  <SelectItem value="Flow 3 - 55&quot; Display">Flow 3 - 55&quot; Display</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="e.g., 123 Main Street, City, State"
+              />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="online">Online</SelectItem>
-                  <SelectItem value="offline">Offline</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="location">
+                Location <span className="text-danger">*</span>
+              </Label>
               <Input
                 id="location"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Enter location"
+                placeholder="e.g., Gym Entrance, Lobby, Reception"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="flowType">
+                Flow Type <span className="text-danger">*</span>
+              </Label>
+              <Select 
+                value={formData.flowType} 
+                onValueChange={(value) => setFormData({ ...formData, flowType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose operational flow" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Normal">Normal - Standard Player</SelectItem>
+                  <SelectItem value="F1">Flow 1 - Standard Measurement</SelectItem>
+                  <SelectItem value="F2">Flow 2 - Enhanced Analytics</SelectItem>
+                  <SelectItem value="F3">Flow 3 - Advanced Features</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+              <div className="space-y-0.5">
+                <Label htmlFor="isEnabled" className="text-base font-medium">
+                  Enable Screen
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {formData.isEnabled 
+                    ? "Screen is enabled and will show ads" 
+                    : "Screen is disabled and will only show default asset"}
+                </p>
+              </div>
+              <Switch
+                id="isEnabled"
+                checked={formData.isEnabled}
+                onCheckedChange={(checked) => setFormData({ ...formData, isEnabled: checked })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
