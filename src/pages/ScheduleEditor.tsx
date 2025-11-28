@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Plus, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Info, Loader2 } from "lucide-react";
 import { AddEventModal } from "@/components/schedule/AddEventModal";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay } from "date-fns";
@@ -16,17 +16,51 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import api from "@/lib/api";
 
 const ScheduleEditor = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [scheduleName, setScheduleName] = useState(id === "new" ? "" : "Schedule 3");
+  const location = useLocation();
+  const [scheduleName, setScheduleName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [addEventModalOpen, setAddEventModalOpen] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
   const [eventsOpen, setEventsOpen] = useState(true);
+
+  useEffect(() => {
+    // Check if we're creating a new schedule
+    const isNewSchedule = location.pathname === "/schedules/new" || !id || id === "new";
+    
+    if (isNewSchedule) {
+      // Creating a new schedule - no loading needed
+      setLoading(false);
+    } else {
+      // Loading an existing schedule
+      setLoading(true);
+      loadSchedule();
+    }
+  }, [id, location.pathname]);
+
+  const loadSchedule = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getSchedule(id!) as { ok: boolean; schedule: any };
+      if (response.ok && response.schedule) {
+        setScheduleName(response.schedule.name);
+        setEvents(response.schedule.events || []);
+      }
+    } catch (error) {
+      console.error('Error loading schedule:', error);
+      toast.error("Failed to load schedule");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -56,13 +90,31 @@ const ScheduleEditor = () => {
     toast.success("Event added successfully");
   };
 
-  const handleSaveSchedule = () => {
+  const handleSaveSchedule = async () => {
     if (!scheduleName.trim()) {
       toast.error("Please enter a schedule name");
       return;
     }
-    toast.success("Schedule saved successfully");
-    navigate("/schedules");
+
+    try {
+      setSaving(true);
+      if (id && id !== "new") {
+        await api.updateSchedule(id, { name: scheduleName, events });
+      } else {
+        const response = await api.createSchedule({ name: scheduleName, events }) as { ok: boolean; schedule: any };
+        if (response.ok) {
+          navigate(`/schedules/${response.schedule.id}`);
+          return;
+        }
+      }
+      toast.success("Schedule saved successfully");
+      navigate("/schedules");
+    } catch (error) {
+      console.error('Error saving schedule:', error);
+      toast.error("Failed to save schedule");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getEventsForDate = (date: Date) => {
@@ -70,6 +122,14 @@ const ScheduleEditor = () => {
   };
 
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  if (loading) {
+    return (
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -89,11 +149,11 @@ const ScheduleEditor = () => {
           </div>
           
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/schedules")} className="flex-1 sm:flex-none">
+            <Button variant="outline" onClick={() => navigate("/schedules")} className="flex-1 sm:flex-none" disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSaveSchedule} className="flex-1 sm:flex-none">
-              Save
+            <Button onClick={handleSaveSchedule} className="flex-1 sm:flex-none" disabled={saving}>
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

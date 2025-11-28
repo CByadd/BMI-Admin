@@ -34,11 +34,34 @@ export const API_ENDPOINTS = {
     WEIGHT_CLASSIFICATION: '/api/admin/weight-classification',
   },
 
+  // Users
+  USERS: {
+    GET_ALL: '/api/admin/users',
+  },
+
   // Media
   MEDIA: {
     UPLOAD: '/api/media/upload',
     GET_ALL: '/api/media',
-    DELETE: (id: string) => `/api/media/${id}`,
+    DELETE: '/api/media/delete',
+  },
+
+  // Playlists
+  PLAYLISTS: {
+    GET_ALL: '/api/playlists',
+    GET_BY_ID: (id: string) => `/api/playlists/${id}`,
+    CREATE: '/api/playlists',
+    UPDATE: (id: string) => `/api/playlists/${id}`,
+    DELETE: (id: string) => `/api/playlists/${id}`,
+  },
+
+  // Schedules
+  SCHEDULES: {
+    GET_ALL: '/api/schedules',
+    GET_BY_ID: (id: string) => `/api/schedules/${id}`,
+    CREATE: '/api/schedules',
+    UPDATE: (id: string) => `/api/schedules/${id}`,
+    DELETE: (id: string) => `/api/schedules/${id}`,
   },
 };
 
@@ -113,7 +136,7 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ flowType }),
     }),
-  updateScreenConfig: (screenId: string, config: { name?: string; address?: string; location?: string; flowType?: string; isEnabled?: boolean }) =>
+  updateScreenConfig: (screenId: string, config: { name?: string; displayName?: string; address?: string; location?: string; flowType?: string; isEnabled?: boolean; playlistId?: string | null; playlistStartDate?: string | null; playlistEndDate?: string | null }) =>
     fetchAPI(API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), {
       method: 'PUT',
       body: JSON.stringify(config),
@@ -127,6 +150,9 @@ export const api = {
   getBMIStats: () => fetchAPI(API_ENDPOINTS.ANALYTICS.BMI_STATS),
   getUserActivity: () => fetchAPI(API_ENDPOINTS.ANALYTICS.USER_ACTIVITY),
   getWeightClassification: () => fetchAPI(API_ENDPOINTS.ANALYTICS.WEIGHT_CLASSIFICATION),
+
+  // Users
+  getAllUsers: () => fetchAPI(API_ENDPOINTS.USERS.GET_ALL),
 
   // Media
   uploadMedia: async (formData: FormData) => {
@@ -163,11 +189,47 @@ export const api = {
   },
   getAllMedia: () => fetchAPI(API_ENDPOINTS.MEDIA.GET_ALL),
   deleteMedia: async (id: string, publicId: string) => {
-    return fetchAPI(API_ENDPOINTS.MEDIA.DELETE(id), {
+    return fetchAPI(API_ENDPOINTS.MEDIA.DELETE, {
       method: 'DELETE',
       body: JSON.stringify({ publicId }),
     });
   },
+
+  // Playlists
+  getAllPlaylists: () => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_ALL),
+  getPlaylist: (id: string) => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_BY_ID(id)),
+  createPlaylist: (data: { name: string; description?: string; tags?: string | string[] }) =>
+    fetchAPI(API_ENDPOINTS.PLAYLISTS.CREATE, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updatePlaylist: (id: string, data: { name?: string; description?: string; tags?: string | string[]; slots?: any[] }) =>
+    fetchAPI(API_ENDPOINTS.PLAYLISTS.UPDATE(id), {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletePlaylist: (id: string) =>
+    fetchAPI(API_ENDPOINTS.PLAYLISTS.DELETE(id), {
+      method: 'DELETE',
+    }),
+
+  // Schedules
+  getAllSchedules: () => fetchAPI(API_ENDPOINTS.SCHEDULES.GET_ALL),
+  getSchedule: (id: string) => fetchAPI(API_ENDPOINTS.SCHEDULES.GET_BY_ID(id)),
+  createSchedule: (data: { name: string; description?: string; events?: any[] }) =>
+    fetchAPI(API_ENDPOINTS.SCHEDULES.CREATE, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateSchedule: (id: string, data: { name?: string; description?: string; events?: any[]; status?: string }) =>
+    fetchAPI(API_ENDPOINTS.SCHEDULES.UPDATE(id), {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteSchedule: (id: string) =>
+    fetchAPI(API_ENDPOINTS.SCHEDULES.DELETE(id), {
+      method: 'DELETE',
+    }),
 };
 
 export default api;

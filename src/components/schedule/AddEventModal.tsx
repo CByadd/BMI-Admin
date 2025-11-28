@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 interface AddEventModalProps {
   open: boolean;
@@ -18,19 +19,10 @@ interface AddEventModalProps {
   onSave: (event: any) => void;
 }
 
-const mockPlaylists = [
-  { id: "1", name: "Morning Routine Ads" },
-  { id: "2", name: "Afternoon Campaign" },
-  { id: "3", name: "Evening Wellness" },
-];
-
-const mockMedia = [
-  { id: "1", name: "Health Tips Video.mp4" },
-  { id: "2", name: "Nutrition Guide.jpg" },
-  { id: "3", name: "Wellness Banner.png" },
-];
-
 export const AddEventModal = ({ open, onOpenChange, selectedDate, onSave }: AddEventModalProps) => {
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [media, setMedia] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [eventType, setEventType] = useState<"schedule" | "turnOff">("schedule");
   const [contentType, setContentType] = useState<"playlist" | "media">("playlist");
   const [selectedContent, setSelectedContent] = useState("");
@@ -42,6 +34,34 @@ export const AddEventModal = ({ open, onOpenChange, selectedDate, onSave }: AddE
   const [customRepeatNumber, setCustomRepeatNumber] = useState("1");
   const [customRepeatUnit, setCustomRepeatUnit] = useState("day");
   const [repeatUntil, setRepeatUntil] = useState("forever");
+
+  useEffect(() => {
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [playlistsResponse, mediaResponse] = await Promise.all([
+        api.getAllPlaylists(),
+        api.getAllMedia(),
+      ]);
+      
+      if ((playlistsResponse as any).ok && (playlistsResponse as any).playlists) {
+        setPlaylists((playlistsResponse as any).playlists);
+      }
+      
+      if (Array.isArray(mediaResponse)) {
+        setMedia(mediaResponse);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = () => {
     const event = {
@@ -106,17 +126,29 @@ export const AddEventModal = ({ open, onOpenChange, selectedDate, onSave }: AddE
                       <SelectValue placeholder="No Content Assigned" />
                     </SelectTrigger>
                     <SelectContent>
-                      {contentType === "playlist"
-                        ? mockPlaylists.map((p) => (
+                      {loading ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : contentType === "playlist" ? (
+                        playlists.length > 0 ? (
+                          playlists.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name}
                             </SelectItem>
                           ))
-                        : mockMedia.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.name}
+                        ) : (
+                          <SelectItem value="no-playlists" disabled>No playlists available</SelectItem>
+                        )
+                      ) : (
+                        media.length > 0 ? (
+                          media.map((m) => (
+                            <SelectItem key={m.id || m.publicId} value={m.id || m.publicId}>
+                              {m.name || m.filename || m.publicId}
                             </SelectItem>
-                          ))}
+                          ))
+                        ) : (
+                          <SelectItem value="no-media" disabled>No media available</SelectItem>
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

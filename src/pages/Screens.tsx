@@ -34,9 +34,6 @@ const Screens = () => {
 
   useEffect(() => {
     fetchScreens();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchScreens, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchScreens = async () => {
@@ -83,7 +80,8 @@ const Screens = () => {
 
           return {
             id: player.screenId,
-            name: player.deviceName || player.screenId,
+            name: player.displayName || player.name || player.deviceName || player.screenId, // displayName takes priority
+            displayName: player.displayName || player.name || player.deviceName || player.screenId,
             model,
             status,
             location: player.location || "Unknown Location",

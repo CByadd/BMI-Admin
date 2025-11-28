@@ -1,4 +1,4 @@
-import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut } from "lucide-react";
+import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 const navigationItems = [
   { title: "Dashboard", url: "/dashboard", icon: Activity },
   { title: "Screens", url: "/screens", icon: MonitorDot },
+  { title: "Users", url: "/users", icon: Users },
   { title: "Media", url: "/media", icon: ImageIcon },
   { title: "Playlists", url: "/playlists", icon: List },
   { title: "Schedules", url: "/schedules", icon: Calendar },

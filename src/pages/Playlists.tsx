@@ -1,65 +1,94 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, Eye } from "lucide-react";
+import { Plus, Search, Eye, Loader2 } from "lucide-react";
 import { PlaylistEmptyState } from "@/components/playlist/PlaylistEmptyState";
 import { PlaylistCard } from "@/components/playlist/PlaylistCard";
 import { CreatePlaylistDialog } from "@/components/playlist/CreatePlaylistDialog";
-
-// Mock data
-const mockPlaylists = [
-  {
-    id: "1",
-    name: "Morning Routine Ads",
-    description: "Health awareness content for morning hours",
-    tags: ["Health", "Morning"],
-    totalDuration: "2:45",
-    lastUpdated: "2 hours ago",
-    slotCount: 8,
-  },
-  {
-    id: "2",
-    name: "Afternoon Campaign",
-    description: "Promotional content for afternoon peak hours",
-    tags: ["Campaign", "Promo"],
-    totalDuration: "3:20",
-    lastUpdated: "1 day ago",
-    slotCount: 8,
-  },
-  {
-    id: "3",
-    name: "Evening Wellness",
-    description: "Wellness tips and nutrition guidance",
-    tags: ["Wellness", "Evening"],
-    totalDuration: "2:15",
-    lastUpdated: "3 days ago",
-    slotCount: 6,
-  },
-];
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 const Playlists = () => {
-  const [playlists, setPlaylists] = useState(mockPlaylists);
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmptyState, setShowEmptyState] = useState(false);
+  const { toast } = useToast();
 
-  const handleDelete = (id: string) => {
-    setPlaylists(prev => prev.filter(p => p.id !== id));
+  useEffect(() => {
+    fetchPlaylists();
+  }, []);
+
+  const fetchPlaylists = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAllPlaylists() as { ok: boolean; playlists: any[] };
+      if (response.ok && response.playlists) {
+        setPlaylists(response.playlists);
+      }
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load playlists",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDuplicate = (id: string) => {
-    const original = playlists.find(p => p.id === id);
-    if (original) {
-      const duplicate = {
-        ...original,
-        id: `${id}-copy-${Date.now()}`,
-        name: `${original.name} (Copy)`,
-        lastUpdated: "Just now",
-      };
-      setPlaylists(prev => [duplicate, ...prev]);
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deletePlaylist(id);
+      toast({
+        title: "Success",
+        description: "Playlist deleted successfully",
+      });
+      fetchPlaylists();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete playlist",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      const original = playlists.find(p => p.id === id);
+      if (original) {
+        const playlistData = await api.getPlaylist(id) as { ok: boolean; playlist: any };
+        if (playlistData.ok && playlistData.playlist) {
+          const duplicate = {
+            name: `${original.name} (Copy)`,
+            description: playlistData.playlist.description,
+            tags: playlistData.playlist.tags,
+            slots: playlistData.playlist.slots,
+          };
+          await api.createPlaylist(duplicate);
+          toast({
+            title: "Success",
+            description: "Playlist duplicated successfully",
+          });
+          fetchPlaylists();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to duplicate playlist",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateSuccess = () => {
+    fetchPlaylists();
   };
 
   const filteredPlaylists = playlists.filter(playlist =>
@@ -68,7 +97,17 @@ const Playlists = () => {
     playlist.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const hasPlaylists = !showEmptyState && playlists.length > 0;
+  const hasPlaylists = !showEmptyState && !loading && playlists.length > 0;
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -137,6 +176,7 @@ const Playlists = () => {
       <CreatePlaylistDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSuccess={handleCreateSuccess}
       />
     </div>
   );

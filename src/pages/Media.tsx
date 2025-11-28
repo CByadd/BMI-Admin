@@ -1,66 +1,126 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Search, Eye } from "lucide-react";
+import { Upload, Search, Eye, Loader2 } from "lucide-react";
 import { MediaEmptyState } from "@/components/media/MediaEmptyState";
 import { UploadMediaModal } from "@/components/media/UploadMediaModal";
 import { MediaCard } from "@/components/media/MediaCard";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
-// Mock data - replace with real data from backend
-const mockMedia = [
-  {
-    id: "1",
-    name: "Health Campaign Banner",
-    type: "image" as const,
-    url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop",
-    tags: ["Health", "Campaign"],
-    uploadDate: "2024-01-15",
-    size: "2.4 MB",
-  },
-  {
-    id: "2",
-    name: "BMI Awareness Video",
-    type: "video" as const,
-    url: "",
-    duration: "2:30",
-    tags: ["Health", "Education"],
-    uploadDate: "2024-01-14",
-    size: "45.2 MB",
-  },
-  {
-    id: "3",
-    name: "Nutrition Guide",
-    type: "image" as const,
-    url: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&h=600&fit=crop",
-    tags: ["Nutrition", "Guide"],
-    uploadDate: "2024-01-13",
-    size: "1.8 MB",
-  },
-];
+interface MediaItem {
+  id: string;
+  name: string;
+  type: "image" | "video";
+  url: string;
+  duration?: string | number;
+  tags: string[];
+  uploadDate: string;
+  size: string | number;
+  publicId?: string;
+}
 
 const Media = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const [mediaItems, setMediaItems] = useState(mockMedia);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showEmptyState, setShowEmptyState] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+  const fetchMedia = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAllMedia() as { ok: boolean; media: any[]; total: number };
+      
+      if (response.ok && response.media) {
+        // Transform API response to match MediaItem interface
+        const transformedMedia: MediaItem[] = response.media.map((item: any) => ({
+          id: item.id || item.publicId,
+          name: item.name,
+          type: item.type,
+          url: item.url,
+          duration: item.duration ? formatDuration(item.duration) : undefined,
+          tags: item.tags || [],
+          uploadDate: item.uploadDate || item.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+          size: formatFileSize(item.size || 0),
+          publicId: item.publicId
+        }));
+        
+        setMediaItems(transformedMedia);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching media:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load media",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleUploadSuccess = () => {
     // Refresh media list after successful upload
+    fetchMedia();
   };
 
-  const handleDelete = (id: string) => {
-    setMediaItems(prev => prev.filter(item => item.id !== id));
+  const handleDelete = async (id: string) => {
+    const mediaItem = mediaItems.find(item => item.id === id);
+    if (!mediaItem?.publicId) {
+      toast({
+        title: "Error",
+        description: "Cannot delete: Missing public ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await api.deleteMedia(id, mediaItem.publicId);
+      toast({
+        title: "Success",
+        description: "Media deleted successfully",
+      });
+      // Refresh media list
+      await fetchMedia();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete media",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredMedia = mediaItems
     .filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = !query || 
+        item.name.toLowerCase().includes(query) ||
+        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(query)));
       const matchesType = filterType === "all" || item.type === filterType;
       return matchesSearch && matchesType;
     })
@@ -77,7 +137,17 @@ const Media = () => {
       return 0;
     });
 
-  const hasMedia = !showEmptyState && mediaItems.length > 0;
+  const hasMedia = !showEmptyState && !loading && mediaItems.length > 0;
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

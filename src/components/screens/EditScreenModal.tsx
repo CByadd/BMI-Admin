@@ -25,18 +25,24 @@ interface EditScreenModalProps {
 const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModalProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [formData, setFormData] = useState({
-    name: screen.name,
+    displayName: screen.name, // Use displayName for the name field
     address: "",
     location: screen.location || "",
     flowType: screen.flowType || "Normal",
     isEnabled: true,
+    playlistId: null as string | null,
+    playlistStartDate: null as string | null,
+    playlistEndDate: null as string | null,
   });
 
-  // Fetch current screen data when modal opens
+  // Fetch current screen data and playlists when modal opens
   useEffect(() => {
     if (open && screen.id) {
       fetchScreenData();
+      fetchPlaylists();
     }
   }, [open, screen.id]);
 
@@ -45,11 +51,14 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
       const response = await api.getPlayer(screen.id) as { ok: boolean; player: any };
       if (response.ok && response.player) {
         setFormData({
-          name: response.player.name || response.player.deviceName || screen.name,
+          displayName: response.player.displayName || response.player.name || response.player.deviceName || screen.name,
           address: response.player.address || "",
           location: response.player.location || screen.location || "",
           flowType: response.player.flowType || "Normal",
           isEnabled: response.player.isEnabled !== undefined ? response.player.isEnabled : true,
+          playlistId: response.player.playlistId || null,
+          playlistStartDate: response.player.playlistStartDate ? new Date(response.player.playlistStartDate).toISOString().split('T')[0] : null,
+          playlistEndDate: response.player.playlistEndDate ? new Date(response.player.playlistEndDate).toISOString().split('T')[0] : null,
         });
       }
     } catch (error) {
@@ -57,10 +66,29 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     }
   };
 
+  const fetchPlaylists = async () => {
+    try {
+      setLoadingPlaylists(true);
+      const response = await api.getAllPlaylists() as { ok: boolean; playlists: any[] };
+      if (response.ok && response.playlists) {
+        setPlaylists(response.playlists);
+      }
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load playlists",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.location) {
+    if (!formData.displayName || !formData.location) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields (Name, Location)",
@@ -72,11 +100,14 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     setIsLoading(true);
     try {
       await api.updateScreenConfig(screen.id, {
-        name: formData.name,
+        displayName: formData.displayName,
         address: formData.address,
         location: formData.location,
         flowType: formData.flowType === "Normal" ? "" : formData.flowType,
         isEnabled: formData.isEnabled,
+        playlistId: formData.playlistId,
+        playlistStartDate: formData.playlistId && formData.playlistStartDate ? formData.playlistStartDate : null,
+        playlistEndDate: formData.playlistId && formData.playlistEndDate ? formData.playlistEndDate : null,
       });
 
       toast({
@@ -86,7 +117,8 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
 
       onSave({ 
         ...screen, 
-        name: formData.name,
+        name: formData.displayName,
+        displayName: formData.displayName,
         location: formData.location,
         flowType: formData.flowType,
       });
@@ -116,8 +148,8 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
               </Label>
               <Input
                 id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.displayName}
+                onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
                 placeholder="Enter screen name"
                 required
               />
@@ -164,6 +196,72 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                   <SelectItem value="F3">Flow 3 - Advanced Features</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="playlistId">
+                Assign Playlist
+              </Label>
+              <Select 
+                value={formData.playlistId || "none"} 
+                onValueChange={(value) => {
+                  const newPlaylistId = value === "none" ? null : value;
+                  setFormData({ 
+                    ...formData, 
+                    playlistId: newPlaylistId,
+                    // Clear dates if playlist is removed
+                    playlistStartDate: newPlaylistId ? formData.playlistStartDate : null,
+                    playlistEndDate: newPlaylistId ? formData.playlistEndDate : null,
+                  });
+                }}
+                disabled={loadingPlaylists}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingPlaylists ? "Loading playlists..." : "Select a playlist (optional)"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Playlist</SelectItem>
+                  {playlists.map((playlist) => (
+                    <SelectItem key={playlist.id} value={playlist.id}>
+                      {playlist.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select a playlist to assign to this screen. The screen will display content from the assigned playlist.
+              </p>
+              
+              {formData.playlistId && (
+                <div className="space-y-2 pt-2 border-t">
+                  <Label htmlFor="playlistStartDate">
+                    Playlist Start Date (Optional)
+                  </Label>
+                  <Input
+                    id="playlistStartDate"
+                    type="date"
+                    value={formData.playlistStartDate || ""}
+                    onChange={(e) => setFormData({ ...formData, playlistStartDate: e.target.value || null })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    When should this playlist start playing? Leave empty for immediate start.
+                  </p>
+                  
+                  <Label htmlFor="playlistEndDate">
+                    Playlist End Date (Optional)
+                  </Label>
+                  <Input
+                    id="playlistEndDate"
+                    type="date"
+                    value={formData.playlistEndDate || ""}
+                    onChange={(e) => setFormData({ ...formData, playlistEndDate: e.target.value || null })}
+                    min={formData.playlistStartDate || undefined}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    When should this playlist stop playing? Leave empty for no end date.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">

@@ -91,15 +91,15 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
 
     setUploading(true);
     try {
-      // Upload each file
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        if (name) formData.append('name', name);
-        if (tags) formData.append('tags', tags);
+      // Upload all files in one request
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file); // Use 'files' (plural) to match backend
+      });
+      if (name) formData.append('name', name);
+      if (tags) formData.append('tags', tags);
 
-        await api.uploadMedia(formData);
-      }
+      await api.uploadMedia(formData);
 
       toast({
         title: "Upload successful",

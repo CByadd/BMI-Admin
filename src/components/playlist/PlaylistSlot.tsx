@@ -44,15 +44,32 @@ export const PlaylistSlot = ({
     e.preventDefault();
     setIsDragging(false);
     
-    // In real implementation, would parse dropped data
-    const mockMedia: SlotMedia = {
-      id: `media-${Date.now()}`,
-      name: "Dropped Media",
-      type: "image",
-      url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
-      duration: 10,
-    };
-    onMediaAdd(slotNumber, mockMedia);
+    try {
+      // Try to get media data from drag event
+      const mediaDataString = e.dataTransfer.getData('application/json');
+      if (mediaDataString) {
+        const mediaData: SlotMedia = JSON.parse(mediaDataString);
+        onMediaAdd(slotNumber, mediaData);
+        return;
+      }
+      
+      // Fallback: if no JSON data, try to get file
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        const mockMedia: SlotMedia = {
+          id: `media-${Date.now()}`,
+          name: file.name,
+          type: file.type.startsWith("video") ? "video" : "image",
+          url: URL.createObjectURL(file),
+          duration: file.type.startsWith("video") ? 30 : 10,
+        };
+        onMediaAdd(slotNumber, mockMedia);
+        return;
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -118,7 +118,7 @@ const ConnectScreenModal = ({ open, onOpenChange, onConnect }: ConnectScreenModa
     try {
       // Update screen configuration
       await api.updateScreenConfig(formData.screenId, {
-        name: formData.name,
+        displayName: formData.name, // Use displayName field
         address: formData.address,
         location: formData.location,
         flowType: formData.flowType === "Normal" ? "" : formData.flowType,
@@ -127,7 +127,8 @@ const ConnectScreenModal = ({ open, onOpenChange, onConnect }: ConnectScreenModa
 
       const newScreen = {
         id: formData.screenId,
-        name: formData.name,
+        name: formData.name, // This will be displayName from backend
+        displayName: formData.name,
         model: `Flow ${formData.flowType || 'Normal'} - ${formData.screenWidth}x${formData.screenHeight} Display`,
         status: "online",
         lastSync: "Just now",

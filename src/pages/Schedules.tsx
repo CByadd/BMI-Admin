@@ -1,67 +1,73 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, Eye } from "lucide-react";
+import { Plus, Search, Eye, Loader2 } from "lucide-react";
 import { ScheduleEmptyState } from "@/components/schedule/ScheduleEmptyState";
 import { ScheduleCard } from "@/components/schedule/ScheduleCard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
-const mockSchedules = [
-  {
-    id: "1",
-    name: "Weekday Morning Schedule",
-    description: "Morning content rotation for weekdays",
-    eventCount: 5,
-    lastUpdated: "2 hours ago",
-    status: "active" as const,
-  },
-  {
-    id: "2",
-    name: "Weekend Schedule",
-    description: "Special weekend content lineup",
-    eventCount: 3,
-    lastUpdated: "1 day ago",
-    status: "active" as const,
-  },
-  {
-    id: "3",
-    name: "Holiday Campaign",
-    description: "Seasonal promotional content",
-    eventCount: 8,
-    lastUpdated: "3 days ago",
-    status: "inactive" as const,
-  },
-];
+import api from "@/lib/api";
 
 const Schedules = () => {
   const navigate = useNavigate();
-  const [schedules, setSchedules] = useState(mockSchedules);
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmptyState, setShowEmptyState] = useState(false);
+
+  useEffect(() => {
+    fetchSchedules();
+  }, []);
+
+  const fetchSchedules = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAllSchedules() as { ok: boolean; schedules: any[] };
+      if (response.ok && response.schedules) {
+        setSchedules(response.schedules);
+      }
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      toast.error("Failed to load schedules");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreate = () => {
     navigate("/schedules/new");
   };
 
-  const handleDelete = (id: string) => {
-    setSchedules((prev) => prev.filter((s) => s.id !== id));
-    toast.success("Schedule deleted successfully");
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteSchedule(id);
+      toast.success("Schedule deleted successfully");
+      fetchSchedules();
+    } catch (error) {
+      toast.error("Failed to delete schedule");
+    }
   };
 
-  const handleDuplicate = (id: string) => {
-    const original = schedules.find((s) => s.id === id);
-    if (original) {
-      const duplicate = {
-        ...original,
-        id: `${id}-copy-${Date.now()}`,
-        name: `${original.name} (Copy)`,
-        lastUpdated: "Just now",
-      };
-      setSchedules((prev) => [duplicate, ...prev]);
-      toast.success("Schedule duplicated successfully");
+  const handleDuplicate = async (id: string) => {
+    try {
+      const original = schedules.find((s) => s.id === id);
+      if (original) {
+        const scheduleData = await api.getSchedule(id) as { ok: boolean; schedule: any };
+        if (scheduleData.ok && scheduleData.schedule) {
+          const duplicate = {
+            name: `${original.name} (Copy)`,
+            description: scheduleData.schedule.description,
+            events: scheduleData.schedule.events,
+          };
+          await api.createSchedule(duplicate);
+          toast.success("Schedule duplicated successfully");
+          fetchSchedules();
+        }
+      }
+    } catch (error) {
+      toast.error("Failed to duplicate schedule");
     }
   };
 
@@ -71,7 +77,17 @@ const Schedules = () => {
       schedule.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const hasSchedules = !showEmptyState && schedules.length > 0;
+  const hasSchedules = !showEmptyState && !loading && schedules.length > 0;
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

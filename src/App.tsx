@@ -16,6 +16,7 @@ import PlaylistEditor from "./pages/PlaylistEditor";
 import PlaylistPreview from "./pages/PlaylistPreview";
 import Schedules from "./pages/Schedules";
 import ScheduleEditor from "./pages/ScheduleEditor";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,6 +117,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <ScheduleEditor />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Users />
                   </Layout>
                 </ProtectedRoute>
               }
