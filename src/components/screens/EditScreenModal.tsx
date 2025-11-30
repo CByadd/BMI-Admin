@@ -24,113 +24,65 @@ interface EditScreenModalProps {
 
 const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModalProps) => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [playlists, setPlaylists] = useState<any[]>([]);
-  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [formData, setFormData] = useState({
-    displayName: screen.name, // Use displayName for the name field
-    address: "",
+    name: screen.name,
     location: screen.location || "",
     flowType: screen.flowType || "Normal",
-    isEnabled: true,
-    playlistId: null as string | null,
-    playlistStartDate: null as string | null,
-    playlistEndDate: null as string | null,
+    isActive: screen.status !== "offline",
   });
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch current screen data and playlists when modal opens
+  // Update form data when screen prop changes
   useEffect(() => {
-    if (open && screen.id) {
-      fetchScreenData();
-      fetchPlaylists();
-    }
-  }, [open, screen.id]);
-
-  const fetchScreenData = async () => {
-    try {
-      const response = await api.getPlayer(screen.id) as { ok: boolean; player: any };
-      if (response.ok && response.player) {
-        setFormData({
-          displayName: response.player.displayName || response.player.name || response.player.deviceName || screen.name,
-          address: response.player.address || "",
-          location: response.player.location || screen.location || "",
-          flowType: response.player.flowType || "Normal",
-          isEnabled: response.player.isEnabled !== undefined ? response.player.isEnabled : true,
-          playlistId: response.player.playlistId || null,
-          playlistStartDate: response.player.playlistStartDate ? new Date(response.player.playlistStartDate).toISOString().split('T')[0] : null,
-          playlistEndDate: response.player.playlistEndDate ? new Date(response.player.playlistEndDate).toISOString().split('T')[0] : null,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching screen data:', error);
-    }
-  };
-
-  const fetchPlaylists = async () => {
-    try {
-      setLoadingPlaylists(true);
-      const response = await api.getAllPlaylists() as { ok: boolean; playlists: any[] };
-      if (response.ok && response.playlists) {
-        setPlaylists(response.playlists);
-      }
-    } catch (error) {
-      console.error('Error fetching playlists:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load playlists",
-        variant: "destructive",
+    if (open) {
+      setFormData({
+        name: screen.name,
+        location: screen.location || "",
+        flowType: screen.flowType || "Normal",
+        isActive: screen.status !== "offline",
       });
-    } finally {
-      setLoadingPlaylists(false);
     }
-  };
+  }, [screen, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     
-    if (!formData.displayName || !formData.location) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields (Name, Location)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
     try {
+      // Update screen configuration via API
+      const normalizedFlowType = formData.flowType === "Normal" ? null : formData.flowType;
+      
       await api.updateScreenConfig(screen.id, {
-        displayName: formData.displayName,
-        address: formData.address,
+        deviceName: formData.name,
         location: formData.location,
-        flowType: formData.flowType === "Normal" ? "" : formData.flowType,
-        isEnabled: formData.isEnabled,
-        playlistId: formData.playlistId,
-        playlistStartDate: formData.playlistId && formData.playlistStartDate ? formData.playlistStartDate : null,
-        playlistEndDate: formData.playlistId && formData.playlistEndDate ? formData.playlistEndDate : null,
+        flowType: normalizedFlowType,
+        isActive: formData.isActive,
       });
 
       toast({
         title: "Success",
-        description: "Screen configuration updated successfully",
+        description: "Screen updated successfully",
       });
 
-      onSave({ 
-        ...screen, 
-        name: formData.displayName,
-        displayName: formData.displayName,
+      // Call onSave with updated data
+      onSave({
+        ...screen,
+        name: formData.name,
         location: formData.location,
-        flowType: formData.flowType,
+        flowType: normalizedFlowType,
+        status: formData.isActive ? (screen.status === "offline" ? "online" : screen.status) : "offline",
       });
+
       onOpenChange(false);
     } catch (error: any) {
+      console.error("Error updating screen:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update screen configuration",
+        description: error?.message || "Failed to update screen",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -143,151 +95,65 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">
-                Screen Name <span className="text-danger">*</span>
-              </Label>
+              <Label htmlFor="name">Screen Name (Device Name)</Label>
               <Input
                 id="name"
-                value={formData.displayName}
-                onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter screen name"
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="e.g., 123 Main Street, City, State"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="location">
-                Location <span className="text-danger">*</span>
-              </Label>
+              <Label htmlFor="location">Location</Label>
               <Input
                 id="location"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g., Gym Entrance, Lobby, Reception"
-                required
+                placeholder="Enter location"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="flowType">
-                Flow Type <span className="text-danger">*</span>
-              </Label>
+              <Label htmlFor="flowType">Flow Type</Label>
               <Select 
                 value={formData.flowType} 
                 onValueChange={(value) => setFormData({ ...formData, flowType: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose operational flow" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Normal">Normal - Standard Player</SelectItem>
-                  <SelectItem value="F1">Flow 1 - Standard Measurement</SelectItem>
-                  <SelectItem value="F2">Flow 2 - Enhanced Analytics</SelectItem>
-                  <SelectItem value="F3">Flow 3 - Advanced Features</SelectItem>
+                  <SelectItem value="Normal">Normal</SelectItem>
+                  <SelectItem value="F1">F1</SelectItem>
+                  <SelectItem value="F2">F2</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="playlistId">
-                Assign Playlist
-              </Label>
-              <Select 
-                value={formData.playlistId || "none"} 
-                onValueChange={(value) => {
-                  const newPlaylistId = value === "none" ? null : value;
-                  setFormData({ 
-                    ...formData, 
-                    playlistId: newPlaylistId,
-                    // Clear dates if playlist is removed
-                    playlistStartDate: newPlaylistId ? formData.playlistStartDate : null,
-                    playlistEndDate: newPlaylistId ? formData.playlistEndDate : null,
-                  });
-                }}
-                disabled={loadingPlaylists}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingPlaylists ? "Loading playlists..." : "Select a playlist (optional)"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Playlist</SelectItem>
-                  {playlists.map((playlist) => (
-                    <SelectItem key={playlist.id} value={playlist.id}>
-                      {playlist.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Select a playlist to assign to this screen. The screen will display content from the assigned playlist.
-              </p>
-              
-              {formData.playlistId && (
-                <div className="space-y-2 pt-2 border-t">
-                  <Label htmlFor="playlistStartDate">
-                    Playlist Start Date (Optional)
-                  </Label>
-                  <Input
-                    id="playlistStartDate"
-                    type="date"
-                    value={formData.playlistStartDate || ""}
-                    onChange={(e) => setFormData({ ...formData, playlistStartDate: e.target.value || null })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    When should this playlist start playing? Leave empty for immediate start.
-                  </p>
-                  
-                  <Label htmlFor="playlistEndDate">
-                    Playlist End Date (Optional)
-                  </Label>
-                  <Input
-                    id="playlistEndDate"
-                    type="date"
-                    value={formData.playlistEndDate || ""}
-                    onChange={(e) => setFormData({ ...formData, playlistEndDate: e.target.value || null })}
-                    min={formData.playlistStartDate || undefined}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    When should this playlist stop playing? Leave empty for no end date.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+            <div className="flex items-center justify-between space-x-2 py-2">
               <div className="space-y-0.5">
-                <Label htmlFor="isEnabled" className="text-base font-medium">
-                  Enable Screen
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {formData.isEnabled 
-                    ? "Screen is enabled and will show ads" 
-                    : "Screen is disabled and will only show default asset"}
+                <Label htmlFor="isActive">Active Status</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable or disable this screen
                 </p>
               </div>
               <Switch
-                id="isEnabled"
-                checked={formData.isEnabled}
-                onCheckedChange={(checked) => setFormData({ ...formData, isEnabled: checked })}
+                id="isActive"
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Changes"}
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>

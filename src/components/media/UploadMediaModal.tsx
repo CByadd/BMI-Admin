@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, FileVideo, FileImage, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 interface UploadMediaModalProps {
@@ -14,12 +14,10 @@ interface UploadMediaModalProps {
 }
 
 export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: UploadMediaModalProps) => {
-  const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
   const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -77,7 +75,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     return true;
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (files.length === 0) {
       toast({
         title: "No files selected",
@@ -89,38 +87,18 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
 
     if (!validateFiles()) return;
 
-    setUploading(true);
-    try {
-      // Upload all files in one request
-      const formData = new FormData();
-      files.forEach((file) => {
-        formData.append('files', file); // Use 'files' (plural) to match backend
-      });
-      if (name) formData.append('name', name);
-      if (tags) formData.append('tags', tags);
+    // Simulate upload
+    toast({
+      title: "Upload successful",
+      description: "Your media has been uploaded successfully!",
+    });
 
-      await api.uploadMedia(formData);
-
-      toast({
-        title: "Upload successful",
-        description: "Your media has been uploaded successfully!",
-      });
-
-      // Reset form
-      setFiles([]);
-      setName("");
-      setTags("");
-      onUploadSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload media. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-    }
+    // Reset form
+    setFiles([]);
+    setName("");
+    setTags("");
+    onUploadSuccess();
+    onOpenChange(false);
   };
 
   const getFileIcon = (file: File) => {

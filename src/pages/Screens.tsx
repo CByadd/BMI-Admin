@@ -34,6 +34,9 @@ const Screens = () => {
 
   useEffect(() => {
     fetchScreens();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchScreens, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchScreens = async () => {
@@ -80,8 +83,7 @@ const Screens = () => {
 
           return {
             id: player.screenId,
-            name: player.displayName || player.name || player.deviceName || player.screenId, // displayName takes priority
-            displayName: player.displayName || player.name || player.deviceName || player.screenId,
+            name: player.deviceName || player.screenId,
             model,
             status,
             location: player.location || "Unknown Location",
@@ -108,24 +110,29 @@ const Screens = () => {
 
   const handleConnectScreen = async (newScreen: any) => {
     try {
-      // Refresh the list to show the newly connected screen
+      // The actual registration happens in ConnectScreenModal
+      // Just refresh the list
       await fetchScreens();
-      // Toast is already shown in ConnectScreenModal
+      toast({
+        title: "Success",
+        description: "Screen connected successfully",
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to refresh screen list",
+        description: "Failed to connect screen",
         variant: "destructive",
       });
     }
   };
 
-  const handleEditScreen = (updatedScreen: Screen) => {
-    // TODO: Implement edit functionality
-    toast({
-      title: "Info",
-      description: "Edit functionality coming soon",
-    });
+  const handleEditScreen = async (updatedScreen: Screen) => {
+    try {
+      // Refresh screens to show updated data
+      await fetchScreens();
+    } catch (error) {
+      console.error('Error refreshing screens:', error);
+    }
   };
 
   const handleFlowTypeChange = async (screenId: string, flowType: string) => {

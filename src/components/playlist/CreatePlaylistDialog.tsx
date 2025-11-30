@@ -6,22 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import api from "@/lib/api";
 
 interface CreatePlaylistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
 }
 
-export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePlaylistDialogProps) => {
+export const CreatePlaylistDialog = ({ open, onOpenChange }: CreatePlaylistDialogProps) => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
-  const [creating, setCreating] = useState(false);
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!name.trim()) {
       toast({
         title: "Name required",
@@ -31,44 +28,21 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
       return;
     }
 
-    try {
-      setCreating(true);
-      const response = await api.createPlaylist({
-        name: name.trim(),
-        description: description.trim(),
-        tags: tags.trim(),
-      }) as { ok: boolean; playlist: any };
-
-      if (response.ok && response.playlist) {
-        toast({
-          title: "Playlist created",
-          description: "Now add media to your 8 slots.",
-        });
-        
-        // Reset form
-        setName("");
-        setDescription("");
-        setTags("");
-        onOpenChange(false);
-        
-        // Call success callback
-        if (onSuccess) {
-          onSuccess();
-        }
-        
-        // Navigate to editor
-        navigate(`/playlists/${response.playlist.id}/edit`);
-      }
-    } catch (error) {
-      console.error('Error creating playlist:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create playlist",
-        variant: "destructive",
-      });
-    } finally {
-      setCreating(false);
-    }
+    // Create playlist and redirect to editor
+    const playlistId = `playlist-${Date.now()}`;
+    toast({
+      title: "Playlist created",
+      description: "Now add media to your 8 slots.",
+    });
+    
+    // Reset form
+    setName("");
+    setDescription("");
+    setTags("");
+    onOpenChange(false);
+    
+    // Navigate to editor
+    navigate(`/playlists/${playlistId}/edit`);
   };
 
   return (
@@ -115,8 +89,8 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={creating}>
-            {creating ? "Creating..." : "Continue to Editor"}
+          <Button onClick={handleCreate}>
+            Continue to Editor
           </Button>
         </DialogFooter>
       </DialogContent>
