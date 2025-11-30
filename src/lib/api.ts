@@ -39,6 +39,24 @@ export const API_ENDPOINTS = {
     GET_ALL: '/api/media',
     DELETE: (id: string) => `/api/media/${id}`,
   },
+
+  // Playlists
+  PLAYLISTS: {
+    GET_ALL: '/api/playlists',
+    GET_BY_ID: (id: string) => `/api/playlists/${id}`,
+    CREATE: '/api/playlists',
+    UPDATE: (id: string) => `/api/playlists/${id}`,
+    DELETE: (id: string) => `/api/playlists/${id}`,
+  },
+
+  // Schedules
+  SCHEDULES: {
+    GET_ALL: '/api/schedules',
+    GET_BY_ID: (id: string) => `/api/schedules/${id}`,
+    CREATE: '/api/schedules',
+    UPDATE: (id: string) => `/api/schedules/${id}`,
+    DELETE: (id: string) => `/api/schedules/${id}`,
+  },
 };
 
 /**
@@ -91,6 +109,9 @@ export const api = {
     location?: string;
     flowType?: string | null;
     isActive?: boolean;
+    playlistId?: string | null;
+    playlistStartDate?: string | null;
+    playlistEndDate?: string | null;
   }) =>
     fetchAPI(API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), {
       method: 'PUT',
@@ -129,6 +150,42 @@ export const api = {
       body: JSON.stringify({ publicId }),
     });
   },
+
+  // Playlists
+  getAllPlaylists: () => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_ALL),
+  getPlaylistById: (id: string) => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_BY_ID(id)),
+  createPlaylist: (playlist: any) =>
+    fetchAPI(API_ENDPOINTS.PLAYLISTS.CREATE, {
+      method: 'POST',
+      body: JSON.stringify(playlist),
+    }),
+  updatePlaylist: (id: string, playlist: any) =>
+    fetchAPI(API_ENDPOINTS.PLAYLISTS.UPDATE(id), {
+      method: 'PUT',
+      body: JSON.stringify(playlist),
+    }),
+  deletePlaylist: (id: string) =>
+    fetchAPI(API_ENDPOINTS.PLAYLISTS.DELETE(id), {
+      method: 'DELETE',
+    }),
+
+  // Schedules
+  getAllSchedules: () => fetchAPI(API_ENDPOINTS.SCHEDULES.GET_ALL),
+  getScheduleById: (id: string) => fetchAPI(API_ENDPOINTS.SCHEDULES.GET_BY_ID(id)),
+  createSchedule: (schedule: any) =>
+    fetchAPI(API_ENDPOINTS.SCHEDULES.CREATE, {
+      method: 'POST',
+      body: JSON.stringify(schedule),
+    }),
+  updateSchedule: (id: string, schedule: any) =>
+    fetchAPI(API_ENDPOINTS.SCHEDULES.UPDATE(id), {
+      method: 'PUT',
+      body: JSON.stringify(schedule),
+    }),
+  deleteSchedule: (id: string) =>
+    fetchAPI(API_ENDPOINTS.SCHEDULES.DELETE(id), {
+      method: 'DELETE',
+    }),
 };
 
 export default api;

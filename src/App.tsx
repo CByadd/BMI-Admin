@@ -4,11 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Screens from "./pages/Screens";
 import ScreenDetails from "./pages/ScreenDetails";
+import Users from "./pages/Users";
 import Media from "./pages/Media";
 import Playlists from "./pages/Playlists";
 import PlaylistEditor from "./pages/PlaylistEditor";
@@ -28,16 +30,94 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Login />} />
-            <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-            <Route path="/screens" element={<Layout><Screens /></Layout>} />
-            <Route path="/screens/:id" element={<Layout><ScreenDetails /></Layout>} />
-            <Route path="/media" element={<Layout><Media /></Layout>} />
-            <Route path="/playlists" element={<Layout><Playlists /></Layout>} />
-            <Route path="/playlists/:id/edit" element={<Layout><PlaylistEditor /></Layout>} />
-            <Route path="/playlists/:id/preview" element={<PlaylistPreview />} />
-            <Route path="/schedules" element={<Layout><Schedules /></Layout>} />
-            <Route path="/schedules/:id/edit" element={<Layout><ScheduleEditor /></Layout>} />
-            <Route path="/schedules/new" element={<Layout><ScheduleEditor /></Layout>} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Layout><Dashboard /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/screens" 
+              element={
+                <ProtectedRoute>
+                  <Layout><Screens /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/screens/:id" 
+              element={
+                <ProtectedRoute>
+                  <Layout><ScreenDetails /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/users" 
+              element={
+                <ProtectedRoute>
+                  <Layout><Users /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/media" 
+              element={
+                <ProtectedRoute>
+                  <Layout><Media /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/playlists" 
+              element={
+                <ProtectedRoute>
+                  <Layout><Playlists /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/playlists/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <Layout><PlaylistEditor /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/playlists/:id/preview" 
+              element={
+                <ProtectedRoute>
+                  <PlaylistPreview />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/schedules" 
+              element={
+                <ProtectedRoute>
+                  <Layout><Schedules /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/schedules/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <Layout><ScheduleEditor /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/schedules/new" 
+              element={
+                <ProtectedRoute>
+                  <Layout><ScheduleEditor /></Layout>
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
