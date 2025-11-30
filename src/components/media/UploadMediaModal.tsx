@@ -18,6 +18,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -75,7 +76,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     return true;
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) {
       toast({
         title: "No files selected",
@@ -87,18 +88,51 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
 
     if (!validateFiles()) return;
 
-    // Simulate upload
-    toast({
-      title: "Upload successful",
-      description: "Your media has been uploaded successfully!",
-    });
+    try {
+      setUploading(true);
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      if (name) {
+        formData.append('name', name);
+      }
+      
+      if (tags) {
+        formData.append('tags', tags);
+      }
 
-    // Reset form
-    setFiles([]);
-    setName("");
-    setTags("");
-    onUploadSuccess();
-    onOpenChange(false);
+      // Upload to server
+      const response = await api.uploadMedia(formData);
+      
+      if (response.ok) {
+        toast({
+          title: "Upload successful",
+          description: response.message || `Successfully uploaded ${files.length} file(s)!`,
+        });
+
+        // Reset form
+        setFiles([]);
+        setName("");
+        setTags("");
+        onUploadSuccess();
+        onOpenChange(false);
+      } else {
+        throw new Error(response.error || 'Upload failed');
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error?.message || "Failed to upload media. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const getFileIcon = (file: File) => {

@@ -154,6 +154,7 @@ export const api = {
   // Playlists
   getAllPlaylists: () => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_ALL),
   getPlaylistById: (id: string) => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_BY_ID(id)),
+  getPlaylist: (id: string) => fetchAPI(API_ENDPOINTS.PLAYLISTS.GET_BY_ID(id)), // Alias for getPlaylistById
   createPlaylist: (playlist: any) =>
     fetchAPI(API_ENDPOINTS.PLAYLISTS.CREATE, {
       method: 'POST',

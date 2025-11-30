@@ -72,25 +72,51 @@ const PlaylistEditor = () => {
   const loadMediaLibrary = async () => {
     try {
       setLoadingMedia(true);
+      console.log('[PLAYLIST_EDITOR] Loading media library...');
       const response = await api.getAllMedia();
+      console.log('[PLAYLIST_EDITOR] Media library response:', response);
+      
       // Handle different response formats
       let media = [];
       if (Array.isArray(response)) {
         media = response;
+        console.log('[PLAYLIST_EDITOR] Response is array, length:', media.length);
       } else if (response && Array.isArray(response.media)) {
         media = response.media;
+        console.log('[PLAYLIST_EDITOR] Response has media array, length:', media.length);
       } else if (response && Array.isArray(response.data)) {
         media = response.data;
+        console.log('[PLAYLIST_EDITOR] Response has data array, length:', media.length);
+      } else if (response && response.ok && Array.isArray(response.media)) {
+        media = response.media;
+        console.log('[PLAYLIST_EDITOR] Response.ok=true, media array length:', media.length);
       } else {
-        console.warn('Unexpected media response format:', response);
+        console.warn('[PLAYLIST_EDITOR] Unexpected media response format:', response);
+        console.warn('[PLAYLIST_EDITOR] Response type:', typeof response);
+        console.warn('[PLAYLIST_EDITOR] Response keys:', response ? Object.keys(response) : 'null');
         media = [];
       }
+      
+      console.log('[PLAYLIST_EDITOR] Final media items loaded:', media.length);
+      if (media.length > 0) {
+        console.log('[PLAYLIST_EDITOR] First media item:', media[0]);
+      }
       setMediaLibrary(media);
+      
+      // Only show toast if there's actually no media (not just a parsing issue)
+      if (media.length === 0 && response && (!response.warning)) {
+        // Don't show toast on initial load - it's annoying
+        // toast({
+        //   title: "No media found",
+        //   description: "Upload media files from the Media page to use them in playlists.",
+        //   variant: "default",
+        // });
+      }
     } catch (error) {
-      console.error('Error loading media library:', error);
+      console.error('[PLAYLIST_EDITOR] Error loading media library:', error);
       toast({
         title: "Error",
-        description: "Failed to load media library",
+        description: error?.message || "Failed to load media library",
         variant: "destructive",
       });
       setMediaLibrary([]);
