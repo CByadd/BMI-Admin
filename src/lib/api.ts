@@ -57,17 +57,38 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/api/schedules/${id}`,
     DELETE: (id: string) => `/api/schedules/${id}`,
   },
+
+  // Auth
+  AUTH: {
+    LOGIN: '/api/auth/login',
+    ME: '/api/auth/me',
+    REGISTER_ADMIN: '/api/auth/admin/register',
+    GET_ALL_ADMINS: '/api/auth/admins',
+    UPDATE_ADMIN: (id: string) => `/api/auth/admin/${id}`,
+    DELETE_ADMIN: (id: string) => `/api/auth/admin/${id}`,
+    ASSIGN_SCREENS: (id: string) => `/api/auth/admin/${id}/assign-screens`,
+    GET_ADMIN_SCREENS: (id: string) => `/api/auth/admin/${id}/screens`,
+  },
 };
 
 /**
- * Generic API fetch function
+ * Get auth token from localStorage
+ */
+function getAuthToken(): string | null {
+  return localStorage.getItem('bmi_admin_token');
+}
+
+/**
+ * Generic API fetch function with auth
  */
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const token = getAuthToken();
   
   const config: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
     ...options,
@@ -187,6 +208,45 @@ export const api = {
     fetchAPI(API_ENDPOINTS.SCHEDULES.DELETE(id), {
       method: 'DELETE',
     }),
+
+  // Auth
+  login: async (email: string, password: string) => {
+    const url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  },
+  getCurrentUser: () => fetchAPI(API_ENDPOINTS.AUTH.ME),
+  registerAdmin: (adminData: any) =>
+    fetchAPI(API_ENDPOINTS.AUTH.REGISTER_ADMIN, {
+      method: 'POST',
+      body: JSON.stringify(adminData),
+    }),
+  getAllAdmins: () => fetchAPI(API_ENDPOINTS.AUTH.GET_ALL_ADMINS),
+  updateAdmin: (id: string, adminData: any) =>
+    fetchAPI(API_ENDPOINTS.AUTH.UPDATE_ADMIN(id), {
+      method: 'PUT',
+      body: JSON.stringify(adminData),
+    }),
+  deleteAdmin: (id: string) =>
+    fetchAPI(API_ENDPOINTS.AUTH.DELETE_ADMIN(id), {
+      method: 'DELETE',
+    }),
+  assignScreens: (id: string, screenIds: string[]) =>
+    fetchAPI(API_ENDPOINTS.AUTH.ASSIGN_SCREENS(id), {
+      method: 'POST',
+      body: JSON.stringify({ screenIds }),
+    }),
+  getAdminScreens: (id: string) => fetchAPI(API_ENDPOINTS.AUTH.GET_ADMIN_SCREENS(id)),
 };
 
 export default api;

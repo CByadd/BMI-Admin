@@ -100,25 +100,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
-      // TODO: Replace with actual API call
-      // For now, using demo credentials
-      if (email === 'admin@bmi.com' && password === 'admin123') {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      const { api } = await import('@/lib/api');
+      const response = await api.login(email, password);
 
-        // Generate a mock token (in production, this comes from the API)
-        const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (response.token && response.user) {
         const userData: User = {
-          id: '1',
-          email: email,
-          name: 'Admin User',
-          role: 'admin',
+          id: response.user.id,
+          email: response.user.email,
+          name: response.user.name,
+          role: response.user.role,
         };
 
-        saveAuthData(mockToken, userData, rememberMe);
-        // Navigation will be handled by the Login component
+        saveAuthData(response.token, userData, rememberMe);
       } else {
-        throw new Error('Invalid credentials');
+        throw new Error('Invalid response from server');
       }
     } catch (error: any) {
       throw error;
@@ -131,15 +126,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const refreshToken = async () => {
-    // TODO: Implement token refresh logic when backend supports it
-    // For now, just check if token is still valid
-    const tokenExpiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
-    if (tokenExpiry) {
-      const expiryDate = new Date(tokenExpiry);
-      const now = new Date();
-      if (expiryDate <= now) {
+    try {
+      const { api } = await import('@/lib/api');
+      const response = await api.getCurrentUser();
+      
+      if (response.user) {
+        const userData: User = {
+          id: response.user.id,
+          email: response.user.email,
+          name: response.user.name,
+          role: response.user.role,
+        };
+        setUser(userData);
+      } else {
         logout();
       }
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      logout();
     }
   };
 

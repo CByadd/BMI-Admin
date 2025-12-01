@@ -1,4 +1,4 @@
-import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users } from "lucide-react";
+import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users, Shield } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -23,12 +23,16 @@ const navigationItems = [
   { title: "Users", url: "/users", icon: Users },
   { title: "Media", url: "/media", icon: ImageIcon },
   { title: "Playlists", url: "/playlists", icon: List },
-  { title: "Schedules", url: "/schedules", icon: Calendar },
+  // { title: "Schedules", url: "/schedules", icon: Calendar },
+];
+
+const adminNavigationItems = [
+  { title: "Admins", url: "/admins", icon: Shield },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -83,6 +87,25 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {user?.role === "super_admin" &&
+                adminNavigationItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end
+                        className={({ isActive }) =>
+                          isActive
+                            ? "bg-muted text-primary font-medium"
+                            : "hover:bg-muted/50"
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
