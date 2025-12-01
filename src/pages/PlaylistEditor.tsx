@@ -1,11 +1,27 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Eye, Clock, AlertCircle, Loader2, Image, Video, GripVertical } from "lucide-react";
-import { PlaylistSlot } from "@/components/playlist/PlaylistSlot";
+import { Badge } from "@/components/ui/badge";
+import { 
+  ArrowLeft, 
+  Save, 
+  Eye, 
+  Clock, 
+  Loader2, 
+  Image, 
+  Video, 
+  GripVertical,
+  Plus,
+  X,
+  Upload,
+  Search,
+  FileVideo,
+  FileImage,
+  Sparkles
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
@@ -27,6 +43,10 @@ const PlaylistEditor = () => {
   const [playlistName, setPlaylistName] = useState("");
   const [mediaLibrary, setMediaLibrary] = useState<any[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
+  const [draggedMedia, setDraggedMedia] = useState<SlotMedia | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
 
   // Ensure mediaLibrary is always an array using useMemo
   const safeMediaLibrary = useMemo(() => {
@@ -34,13 +54,22 @@ const PlaylistEditor = () => {
       if (Array.isArray(mediaLibrary)) {
         return mediaLibrary;
       }
-      console.warn('mediaLibrary is not an array:', mediaLibrary, typeof mediaLibrary);
       return [];
     } catch (error) {
       console.error('Error in safeMediaLibrary useMemo:', error);
       return [];
     }
   }, [mediaLibrary]);
+
+  // Filter media library by search query
+  const filteredMedia = useMemo(() => {
+    if (!searchQuery.trim()) return safeMediaLibrary;
+    const query = searchQuery.toLowerCase();
+    return safeMediaLibrary.filter(media => 
+      (media.name || '').toLowerCase().includes(query) ||
+      (media.publicId || '').toLowerCase().includes(query)
+    );
+  }, [safeMediaLibrary, searchQuery]);
 
   useEffect(() => {
     if (id && id !== "new") {
@@ -74,46 +103,20 @@ const PlaylistEditor = () => {
   const loadMediaLibrary = async () => {
     try {
       setLoadingMedia(true);
-      console.log('[PLAYLIST_EDITOR] Loading media library...');
       const response = await api.getAllMedia();
-      console.log('[PLAYLIST_EDITOR] Media library response:', response);
       
-      // Handle different response formats
       let media = [];
       if (Array.isArray(response)) {
         media = response;
-        console.log('[PLAYLIST_EDITOR] Response is array, length:', media.length);
       } else if (response && Array.isArray(response.media)) {
         media = response.media;
-        console.log('[PLAYLIST_EDITOR] Response has media array, length:', media.length);
       } else if (response && Array.isArray(response.data)) {
         media = response.data;
-        console.log('[PLAYLIST_EDITOR] Response has data array, length:', media.length);
       } else if (response && response.ok && Array.isArray(response.media)) {
         media = response.media;
-        console.log('[PLAYLIST_EDITOR] Response.ok=true, media array length:', media.length);
-      } else {
-        console.warn('[PLAYLIST_EDITOR] Unexpected media response format:', response);
-        console.warn('[PLAYLIST_EDITOR] Response type:', typeof response);
-        console.warn('[PLAYLIST_EDITOR] Response keys:', response ? Object.keys(response) : 'null');
-        media = [];
       }
       
-      console.log('[PLAYLIST_EDITOR] Final media items loaded:', media.length);
-      if (media.length > 0) {
-        console.log('[PLAYLIST_EDITOR] First media item:', media[0]);
-      }
       setMediaLibrary(media);
-      
-      // Only show toast if there's actually no media (not just a parsing issue)
-      if (media.length === 0 && response && (!response.warning)) {
-        // Don't show toast on initial load - it's annoying
-        // toast({
-        //   title: "No media found",
-        //   description: "Upload media files from the Media page to use them in playlists.",
-        //   variant: "default",
-        // });
-      }
     } catch (error) {
       console.error('[PLAYLIST_EDITOR] Error loading media library:', error);
       toast({
@@ -127,24 +130,75 @@ const PlaylistEditor = () => {
     }
   };
 
-  const handleMediaAdd = (slotNumber: number, media: SlotMedia) => {
-    const newSlots = [...slots];
-    newSlots[slotNumber - 1] = media;
-    setSlots(newSlots);
+  const handleMediaAdd = useCallback((slotNumber: number, media: SlotMedia) => {
+    setSlots(prev => {
+      const newSlots = [...prev];
+      newSlots[slotNumber - 1] = media;
+      return newSlots;
+    });
+  }, []);
+
+  const handleMediaRemove = useCallback((slotNumber: number) => {
+    setSlots(prev => {
+      const newSlots = [...prev];
+      newSlots[slotNumber - 1] = null;
+      return newSlots;
+    });
+  }, []);
+
+  const handleDurationChange = useCallback((slotNumber: number, duration: number) => {
+    setSlots(prev => {
+      const newSlots = [...prev];
+      const slot = newSlots[slotNumber - 1];
+      if (slot) {
+        newSlots[slotNumber - 1] = { ...slot, duration };
+      }
+      return newSlots;
+    });
+  }, []);
+
+  const handleDragStart = (media: SlotMedia, slotIndex?: number) => {
+    setDraggedMedia(media);
+    if (slotIndex !== undefined) {
+      setDraggedSlot(slotIndex);
+    }
   };
 
-  const handleMediaRemove = (slotNumber: number) => {
-    const newSlots = [...slots];
-    newSlots[slotNumber - 1] = null;
-    setSlots(newSlots);
+  const handleDragEnd = () => {
+    setDraggedMedia(null);
+    setDraggedSlot(null);
+    setDragOverSlot(null);
   };
 
-  const handleDurationChange = (slotNumber: number, duration: number) => {
-    const newSlots = [...slots];
-    const slot = newSlots[slotNumber - 1];
-    if (slot) {
-      newSlots[slotNumber - 1] = { ...slot, duration };
-      setSlots(newSlots);
+  const handleDragOver = (e: React.DragEvent, slotIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverSlot(slotIndex);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, slotIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverSlot(null);
+
+    if (draggedMedia) {
+      handleMediaAdd(slotIndex + 1, draggedMedia);
+      setDraggedMedia(null);
+      setDraggedSlot(null);
+    } else {
+      try {
+        const mediaDataString = e.dataTransfer.getData('application/json');
+        if (mediaDataString) {
+          const mediaData: SlotMedia = JSON.parse(mediaDataString);
+          handleMediaAdd(slotIndex + 1, mediaData);
+        }
+      } catch (error) {
+        console.error('Error handling drop:', error);
+      }
     }
   };
 
@@ -160,7 +214,6 @@ const PlaylistEditor = () => {
   const filledSlots = slots.filter(slot => slot !== null).length;
 
   const handleSave = async () => {
-    // Check if at least one slot is filled
     if (filledSlots === 0) {
       toast({
         title: "Empty playlist",
@@ -182,7 +235,6 @@ const PlaylistEditor = () => {
     try {
       setSaving(true);
       if (id && id !== "new") {
-        // Update existing playlist - include name and slots (allow empty slots)
         await api.updatePlaylist(id, { name: playlistName.trim(), slots });
         toast({
           title: "Playlist saved",
@@ -190,7 +242,6 @@ const PlaylistEditor = () => {
         });
         navigate("/playlists");
       } else {
-        // Create new playlist if it doesn't exist
         const response = await api.createPlaylist({
           name: playlistName.trim(),
           slots,
@@ -201,7 +252,6 @@ const PlaylistEditor = () => {
             title: "Playlist created",
             description: "Your playlist has been created successfully.",
           });
-          // Navigate to the newly created playlist's edit page
           navigate(`/playlists/${response.playlist.id}/edit`);
         } else {
           throw new Error("Failed to create playlist");
@@ -228,9 +278,7 @@ const PlaylistEditor = () => {
       });
       return;
     }
-    // Save current state before preview (with empty slots allowed)
     if (id && id !== "new" && playlistName.trim()) {
-      // Auto-save before preview
       api.updatePlaylist(id, { name: playlistName.trim(), slots }).catch(console.error);
     }
     navigate(`/playlists/${id}/preview`);
@@ -246,217 +294,338 @@ const PlaylistEditor = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      {/* Header */}
-      <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => navigate("/playlists")}
-                className="flex-shrink-0"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold text-foreground">{playlistName || "Edit Playlist"}</h1>
-                <p className="text-xs text-muted-foreground hidden sm:block">Configure your 8-slot content sequence</p>
+      {/* Modern Header */}
+      <header className="bg-card/95 backdrop-blur-md border-b border-border/50 sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
+          <div className="flex flex-col gap-4">
+            {/* Top Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/playlists")}
+                  className="flex-shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+                    {playlistName || "New Playlist"}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handlePreview} 
+                  disabled={filledSlots === 0}
+                  className="hidden sm:flex"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview
+                </Button>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={filledSlots === 0 || saving || !playlistName.trim()}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      <span className="hidden sm:inline">Save Playlist</span>
+                      <span className="sm:hidden">Save</span>
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={handlePreview} className="flex-1 sm:flex-none">
-                <Eye className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Preview</span>
-              </Button>
-              <Button onClick={handleSave} disabled={filledSlots === 0 || saving} className="flex-1 sm:flex-none">
-                <Save className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">{saving ? "Saving..." : "Save Playlist"}</span>
-                <span className="sm:hidden">{saving ? "Saving..." : "Save"}</span>
-              </Button>
+
+            {/* Playlist Name Input */}
+            <div className="flex items-center gap-3">
+              <Input
+                value={playlistName}
+                onChange={(e) => setPlaylistName(e.target.value)}
+                placeholder="Enter playlist name..."
+                className="max-w-md h-10 text-base font-medium"
+              />
+              <div className="hidden sm:flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-muted-foreground">Duration:</span>
+                  <span className="font-semibold text-foreground">{calculateTotalDuration()}</span>
+                </div>
+                <div className="h-4 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Slots:</span>
+                  <Badge variant="secondary" className="font-semibold">
+                    {filledSlots}/8
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 pb-80">
-        <div className="space-y-6">
-          {/* Playlist Name Input */}
-          <Card className="p-4">
-            <div className="space-y-2">
-              <Label htmlFor="playlist-name">Playlist Name</Label>
-              <Input
-                id="playlist-name"
-                value={playlistName}
-                onChange={(e) => setPlaylistName(e.target.value)}
-                placeholder="Enter playlist name..."
-                className="max-w-md"
-              />
-            </div>
-          </Card>
-
-          {/* Status Banner */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Duration</p>
-                    <p className="text-2xl font-bold text-foreground">{calculateTotalDuration()}</p>
-                  </div>
-                </div>
-                <div className="h-12 w-px bg-border" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Slots Filled</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {filledSlots}/8
-                  </p>
-                </div>
+      <main className="container mx-auto px-4 sm:px-6 py-6 pb-32 sm:pb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Slots Section - Takes 2 columns on large screens */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Mobile Stats */}
+            <div className="sm:hidden flex items-center justify-between p-4 bg-card rounded-lg border border-border">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                <span className="text-sm text-muted-foreground">Duration:</span>
+                <span className="text-sm font-semibold">{calculateTotalDuration()}</span>
               </div>
-              
-              {filledSlots < 8 && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <AlertCircle className="w-5 h-5" />
-                  <span className="text-sm">
-                    {8 - filledSlots} empty slot{8 - filledSlots !== 1 ? 's' : ''} (optional)
-                  </span>
-                </div>
-              )}
+              <div className="h-4 w-px bg-border" />
+              <Badge variant="secondary">
+                {filledSlots}/8 slots
+              </Badge>
             </div>
-          </Card>
 
-          {/* 8 Slots Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((slotNumber) => (
-              <PlaylistSlot
-                key={slotNumber}
-                slotNumber={slotNumber}
-                media={slots[slotNumber - 1]}
-                onMediaAdd={handleMediaAdd}
-                onMediaRemove={handleMediaRemove}
-                onDurationChange={handleDurationChange}
-              />
-            ))}
+            {/* Slots Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {slots.map((slot, index) => (
+                <Card
+                  key={index}
+                  className={`relative transition-all duration-200 ${
+                    dragOverSlot === index
+                      ? "border-primary border-2 bg-primary/10 scale-105 shadow-lg"
+                      : draggedSlot === index
+                      ? "opacity-50 border-border"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                >
+                  {slot ? (
+                    <div className="p-4 space-y-3">
+                      {/* Slot Header */}
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="font-semibold">
+                          Slot {index + 1}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleMediaRemove(index + 1)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {/* Media Preview */}
+                      <div className="relative aspect-video bg-muted rounded-lg overflow-hidden group">
+                        {slot.type === "image" ? (
+                          <img
+                            src={slot.url}
+                            alt={slot.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                            <FileVideo className="w-12 h-12 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <Badge className="bg-black/60 text-white">
+                            {slot.type === "video" ? (
+                              <>
+                                <Video className="w-3 h-3 mr-1" />
+                                Video
+                              </>
+                            ) : (
+                              <>
+                                <Image className="w-3 h-3 mr-1" />
+                                Image
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Media Info */}
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {slot.name}
+                        </p>
+                        
+                        {/* Duration Control */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            {slot.type === "video" ? "Video Duration" : "Display Duration (seconds)"}
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={slot.duration}
+                              onChange={(e) => handleDurationChange(index + 1, parseInt(e.target.value) || 10)}
+                              disabled={slot.type === "video"}
+                              className="h-9 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">sec</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      className="p-6 flex flex-col items-center justify-center text-center min-h-[200px] cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                        <Upload className="w-8 h-8 text-primary" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground mb-1">
+                        Slot {index + 1}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Drag media here or click to browse
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        Empty
+                      </Badge>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
           </div>
 
-          {/* Instructions */}
-          {filledSlots === 0 && (
-            <Card className="p-6 bg-muted/50">
-              <h3 className="font-semibold text-foreground mb-2">Getting Started</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Playlists can have up to 8 content slots (empty slots are allowed)</li>
-                <li>• Add at least one media item to save the playlist</li>
-                <li>• Drag assets from your media library below or upload new files</li>
-                <li>• Set display duration for images (videos use actual length)</li>
-                <li>• Preview your playlist before saving</li>
-                <li>• Total duration is calculated automatically</li>
-              </ul>
-            </Card>
-          )}
-
-          {/* Media Library Section - Fixed at Bottom */}
-          <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-50 shadow-lg">
-            <div className="container mx-auto px-4 py-4">
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">Media Library</h3>
-                    <p className="text-sm text-muted-foreground">Drag and drop assets to slots above</p>
-                  </div>
+          {/* Media Library Sidebar */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24 h-[calc(100vh-8rem)] flex flex-col">
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <GripVertical className="w-5 h-5 text-primary" />
+                    Media Library
+                  </h3>
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
                     onClick={loadMediaLibrary}
                     disabled={loadingMedia}
                   >
                     {loadingMedia ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Loading...
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      "Refresh"
+                      <span className="text-xs">↻</span>
                     )}
                   </Button>
                 </div>
+                
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search media..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 text-sm"
+                  />
+                </div>
+              </div>
 
+              {/* Media Grid */}
+              <div className="flex-1 overflow-y-auto p-4">
                 {loadingMedia ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
-                ) : safeMediaLibrary.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Image className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No media found. Upload assets from the Media page.</p>
+                ) : filteredMedia.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Image className="w-12 h-12 mx-auto mb-3 opacity-30 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      {searchQuery ? "No media found" : "No media available"}
+                    </p>
+                    {!searchQuery && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload from Media page
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 max-h-48 overflow-y-auto">
-                    {Array.isArray(safeMediaLibrary) ? safeMediaLibrary.map((media) => {
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredMedia.map((media) => {
                       const isImage = media.type === 'image' || media.resource_type === 'image';
                       const isVideo = media.type === 'video' || media.resource_type === 'video';
                       const mediaType = isVideo ? 'video' : 'image';
                       
+                      const mediaData: SlotMedia = {
+                        id: media.id || media.publicId,
+                        name: media.name || 'Untitled',
+                        type: mediaType,
+                        url: media.url || media.secure_url,
+                        duration: isVideo ? (media.duration || 30) : 10,
+                        thumbnail: isImage ? (media.url || media.secure_url) : undefined,
+                      };
+
                       return (
                         <Card
                           key={media.id || media.publicId}
-                          className="relative group cursor-grab active:cursor-grabbing overflow-hidden border-2 border-transparent hover:border-primary transition-all"
+                          className="group cursor-grab active:cursor-grabbing overflow-hidden border-2 border-transparent hover:border-primary transition-all hover:shadow-md"
                           draggable
                           onDragStart={(e) => {
-                            const mediaData: SlotMedia = {
-                              id: media.id || media.publicId,
-                              name: media.name || 'Untitled',
-                              type: mediaType,
-                              url: media.url || media.secure_url,
-                              duration: isVideo ? (media.duration || 30) : 10,
-                              thumbnail: isImage ? (media.url || media.secure_url) : undefined,
-                            };
+                            handleDragStart(mediaData);
                             e.dataTransfer.setData('application/json', JSON.stringify(mediaData));
                             e.dataTransfer.effectAllowed = 'move';
                           }}
+                          onDragEnd={handleDragEnd}
                         >
                           <div className="aspect-video bg-muted relative overflow-hidden">
                             {isImage ? (
                               <img
                                 src={media.url || media.secure_url}
                                 alt={media.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
-                            ) : isVideo ? (
-                              <div className="w-full h-full flex items-center justify-center bg-muted">
-                                <Video className="w-8 h-8 text-muted-foreground" />
-                              </div>
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-muted">
-                                <Image className="w-8 h-8 text-muted-foreground" />
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                                <FileVideo className="w-6 h-6 text-muted-foreground" />
                               </div>
                             )}
-                            <div className="absolute top-2 left-2">
-                              <div className="bg-black/60 backdrop-blur-sm rounded px-2 py-1 flex items-center gap-1">
-                                <GripVertical className="w-3 h-3 text-white" />
+                            <div className="absolute top-1 right-1">
+                              <Badge className="bg-black/60 text-white text-[10px] px-1.5 py-0.5">
                                 {isVideo ? (
-                                  <Video className="w-3 h-3 text-white" />
+                                  <Video className="w-2.5 h-2.5 mr-0.5" />
                                 ) : (
-                                  <Image className="w-3 h-3 text-white" />
+                                  <Image className="w-2.5 h-2.5 mr-0.5" />
                                 )}
-                              </div>
+                                {mediaType}
+                              </Badge>
+                            </div>
+                            <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors flex items-center justify-center">
+                              <GripVertical className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </div>
                           <div className="p-2">
                             <p className="text-xs font-medium text-foreground truncate">
                               {media.name || 'Untitled'}
                             </p>
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="text-xs text-muted-foreground">
                               {mediaType === 'video' ? `${media.duration || 30}s` : 'Image'}
                             </p>
                           </div>
                         </Card>
                       );
-                    }) : null}
+                    })}
                   </div>
                 )}
-              </Card>
-            </div>
+              </div>
+            </Card>
           </div>
         </div>
       </main>

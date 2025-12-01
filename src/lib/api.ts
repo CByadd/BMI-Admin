@@ -4,7 +4,7 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
   import.meta.env.REACT_APP_API_URL || 
-  'https://well2day-server-ghcvbyaed8cndhgt.centralindia-01.azurewebsites.net';
+  'http://localhost:4000';
 
 /**
  * API Endpoints

@@ -53,6 +53,14 @@ export const PlaylistCard = ({ playlist, onDelete, onDuplicate }: PlaylistCardPr
     });
   };
 
+  const formatDuration = (duration: string) => {
+  // duration comes like: "1:44.73913800000001"
+  const [min, sec] = duration.split(":");
+  const wholeSec = Math.floor(Number(sec));
+  return `${min} min ${wholeSec} sec`;
+};
+
+
   return (
     <>
       <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -85,7 +93,7 @@ export const PlaylistCard = ({ playlist, onDelete, onDuplicate }: PlaylistCardPr
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Clock className="w-4 h-4" />
-                <span>{playlist.totalDuration}</span>
+                <span>{formatDuration(playlist.totalDuration)}</span>
               </div>
               <span className="text-xs text-muted-foreground">
                 Updated {playlist.lastUpdated}

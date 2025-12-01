@@ -151,7 +151,7 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
           </div>
 
           {/* Tags */}
-          <div className="space-y-3">
+          {/* <div className="space-y-3">
             <Label htmlFor="tags" className="text-base font-semibold flex items-center gap-2">
               <Tag className="w-4 h-4 text-primary" />
               Tags <span className="text-muted-foreground font-normal">(Optional)</span>
@@ -167,7 +167,7 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
             <p className="text-xs text-muted-foreground">
               Add tags to organize and filter your playlists easily.
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Footer with Actions */}
