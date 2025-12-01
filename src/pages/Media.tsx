@@ -40,32 +40,54 @@ const Media = () => {
   const fetchMedia = async () => {
     try {
       setLoading(true);
-      const response = await api.getAllMedia() as { ok: boolean; media: any[]; total: number };
+      console.log('[MEDIA_PAGE] Fetching media...');
+      const response = await api.getAllMedia() as { ok: boolean; media: any[]; total: number; warning?: string };
+      
+      console.log('[MEDIA_PAGE] Media response:', {
+        ok: response.ok,
+        mediaCount: response.media?.length || 0,
+        total: response.total,
+        warning: response.warning
+      });
+      
+      if (response.warning) {
+        console.warn('[MEDIA_PAGE] Warning from server:', response.warning);
+        toast({
+          title: "Warning",
+          description: response.warning,
+          variant: "default",
+        });
+      }
       
       if (response.ok && response.media) {
         // Transform API response to match MediaItem interface
         const transformedMedia: MediaItem[] = response.media.map((item: any) => ({
           id: item.id || item.publicId,
-          name: item.name,
-          type: item.type,
-          url: item.url,
+          name: item.name || 'Untitled',
+          type: item.type || (item.resource_type === 'video' ? 'video' : 'image'),
+          url: item.url || item.secure_url,
           duration: item.duration ? formatDuration(item.duration) : undefined,
           tags: item.tags || [],
           uploadDate: item.uploadDate || item.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
           size: formatFileSize(item.size || 0),
-          publicId: item.publicId
+          publicId: item.publicId || item.id
         }));
         
+        console.log('[MEDIA_PAGE] Transformed media items:', transformedMedia.length);
         setMediaItems(transformedMedia);
+      } else if (response.ok && (!response.media || response.media.length === 0)) {
+        console.log('[MEDIA_PAGE] No media found');
+        setMediaItems([]);
       }
       setLoading(false);
-    } catch (error) {
-      console.error('Error fetching media:', error);
+    } catch (error: any) {
+      console.error('[MEDIA_PAGE] Error fetching media:', error);
       toast({
         title: "Error",
-        description: "Failed to load media",
+        description: error?.message || "Failed to load media. Check server logs for details.",
         variant: "destructive",
       });
+      setMediaItems([]);
       setLoading(false);
     }
   };
@@ -99,7 +121,8 @@ const Media = () => {
     }
 
     try {
-      await api.deleteMedia(id, mediaItem.publicId);
+      // Pass resource type to help with deletion
+      await api.deleteMedia(id, mediaItem.publicId, mediaItem.type);
       toast({
         title: "Success",
         description: "Media deleted successfully",

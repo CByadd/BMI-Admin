@@ -222,7 +222,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
           )}
 
           {/* Name Field */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="name">Name (Optional)</Label>
             <Input
               id="name"
@@ -230,10 +230,10 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
+          </div> */}
 
           {/* Tags Field */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="tags">Tags (Optional)</Label>
             <Input
               id="tags"
@@ -241,7 +241,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
               value={tags}
               onChange={(e) => setTags(e.target.value)}
             />
-          </div>
+          </div> */}
         </div>
 
         <DialogFooter>

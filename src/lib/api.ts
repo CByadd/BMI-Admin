@@ -37,7 +37,7 @@ export const API_ENDPOINTS = {
   MEDIA: {
     UPLOAD: '/api/media/upload',
     GET_ALL: '/api/media',
-    DELETE: (id: string) => `/api/media/${id}`,
+    DELETE: '/api/media/delete',
   },
 
   // Playlists
@@ -144,10 +144,10 @@ export const api = {
     return await response.json();
   },
   getAllMedia: () => fetchAPI(API_ENDPOINTS.MEDIA.GET_ALL),
-  deleteMedia: async (id: string, publicId: string) => {
-    return fetchAPI(API_ENDPOINTS.MEDIA.DELETE(id), {
+  deleteMedia: async (id: string, publicId: string, resourceType?: string) => {
+    return fetchAPI(API_ENDPOINTS.MEDIA.DELETE, {
       method: 'DELETE',
-      body: JSON.stringify({ publicId }),
+      body: JSON.stringify({ publicId, resourceType }),
     });
   },
 
