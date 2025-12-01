@@ -47,15 +47,16 @@ export function AppSidebar() {
     <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-border p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0">
-            <Activity className="w-6 h-6 text-primary-foreground" />
-          </div>
-          {!isCollapsed && (
+       
+            {/* <Activity className="w-6 h-6 text-primary-foreground" /> */}
+            <img src="https://well2day.in/assets/img/Group%202325.png" className="h-6 w-auto" alt="logo" />
+          
+          {/* {!isCollapsed && (
             <div>
               <h1 className="text-lg font-bold text-foreground">BMI Admin</h1>
               <p className="text-xs text-muted-foreground">Health Analytics</p>
             </div>
-          )}
+          )} */}
         </div>
       </SidebarHeader>
 
