@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Activity } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+
 import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
@@ -16,6 +18,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -79,10 +83,15 @@ const Login = () => {
         <div className="bg-card rounded-2xl shadow-lg p-8 space-y-6 border border-border">
           {/* Logo & Header */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-2">
-              <Activity className="w-8 h-8 text-primary-foreground" />
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl ">
+              {/* <Activity className="w-8 h-8 text-primary-foreground" /> */}
+               <img
+      src="https://well2day.in/assets/img/Group%202325.png"
+      className="h-24 w-24 object-contain flex-shrink-0"
+      alt="logo"
+    />
             </div>
-            <h1 className="text-3xl font-bold text-foreground">BMI Admin Panel</h1>
+            <h1 className="text-3xl font-bold text-foreground">Well2Day Admin Panel</h1>
             <p className="text-muted-foreground">Sign in to access your dashboard</p>
           </div>
 
@@ -93,24 +102,36 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@bmi.com"
+                placeholder="Email Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-11"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
-              />
-            </div>
+           <div className="space-y-2">
+  <Label htmlFor="password">Password</Label>
+  <div className="relative">
+    <Input
+      id="password"
+      type={showPassword ? "text" : "password"}
+      placeholder="Enter your password"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      className="h-11 pr-10"
+    />
+
+    {/* Toggle Button */}
+    <button
+      type="button"
+      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground"
+      onClick={() => setShowPassword((prev) => !prev)}
+    >
+      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+    </button>
+  </div>
+</div>
+
 
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -126,13 +147,13 @@ const Login = () => {
                   Remember me
                 </Label>
               </div>
-              <button
+              {/* <button
                 type="button"
                 onClick={handleForgotPassword}
                 className="text-sm text-primary hover:underline"
               >
                 Forgot password?
-              </button>
+              </button> */}
             </div>
 
             <Button
@@ -145,11 +166,11 @@ const Login = () => {
           </form>
 
           {/* Demo Credentials Info */}
-          <div className="p-3 bg-accent/50 rounded-lg border border-accent-foreground/10">
+          {/* <div className="p-3 bg-accent/50 rounded-lg border border-accent-foreground/10">
             <p className="text-xs text-center text-muted-foreground">
               <span className="font-semibold">Demo:</span> admin@bmi.com / admin123
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

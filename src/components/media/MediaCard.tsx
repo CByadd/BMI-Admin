@@ -24,6 +24,7 @@ interface MediaItem {
   tags: string[];
   uploadDate: string;
   size: string;
+  publicId?: string;
 }
 
 interface MediaCardProps {
@@ -34,6 +35,54 @@ interface MediaCardProps {
 export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState(false);
+
+  // Generate Cloudinary thumbnail URL for videos
+  const getVideoThumbnail = (url: string, publicId?: string): string => {
+    if (!url) return '';
+    
+    // Cloudinary video thumbnail transformation
+    // so_1 = start offset at 1 second (get frame at 1 second)
+    // w_400,h_300 = width and height
+    // c_fill = crop fill
+    // f_jpg = format as jpg (for thumbnail)
+    // q_auto = quality auto
+    
+    if (url.includes('cloudinary.com')) {
+      try {
+        // Extract the base URL and path
+        // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{transformations}/{version}/{public_id}.{format}
+        // For videos: https://res.cloudinary.com/{cloud_name}/video/upload/{version}/{public_id}.mp4
+        // Thumbnail: https://res.cloudinary.com/{cloud_name}/video/upload/so_1,w_400,h_300,c_fill,f_jpg,q_auto/{version}/{public_id}.jpg
+        
+        // Replace video format with jpg and add transformations
+        if (url.includes('/video/upload/')) {
+          // Check if transformations already exist
+          const hasTransformations = url.match(/\/video\/upload\/([^/]+\/){2,}/);
+          
+          if (!hasTransformations) {
+            // No transformations, add them
+            // Pattern: /video/upload/{version}/{public_id}.mp4
+            // Result: /video/upload/so_1,w_400,h_300,c_fill,f_jpg,q_auto/{version}/{public_id}.jpg
+            return url
+              .replace(/\/video\/upload\//, '/video/upload/so_1,w_400,h_300,c_fill,f_jpg,q_auto/')
+              .replace(/\.(mp4|mov|avi|webm|mkv)$/i, '.jpg');
+          } else {
+            // Has transformations, insert before them or replace
+            return url
+              .replace(/\/video\/upload\/([^/]+\/)/, '/video/upload/so_1,w_400,h_300,c_fill,f_jpg,q_auto/$1')
+              .replace(/\.(mp4|mov|avi|webm|mkv)$/i, '.jpg');
+          }
+        }
+      } catch (error) {
+        console.error('Error generating video thumbnail:', error);
+      }
+    }
+    
+    return url;
+  };
+
+  const videoThumbnail = media.type === "video" ? getVideoThumbnail(media.url, media.publicId) : null;
 
   const handleDelete = () => {
     onDelete(media.id);
@@ -56,15 +105,34 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center gap-2">
-                <FileVideo className="w-16 h-16 text-muted-foreground" />
-                {media.duration && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>{media.duration}</span>
+              <>
+                {videoThumbnail && !thumbnailError ? (
+                  <img
+                    src={videoThumbnail}
+                    alt={media.name}
+                    className="w-full h-full object-cover"
+                    onError={() => setThumbnailError(true)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <FileVideo className="w-16 h-16 text-muted-foreground" />
+                    {media.duration && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        <span>{media.duration}</span>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+                {/* Video play indicator overlay */}
+                {videoThumbnail && !thumbnailError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                      <FileVideo className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             
             {/* Hover overlay */}
@@ -139,7 +207,7 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
 
       {/* Preview Dialog */}
       <AlertDialog open={showPreview} onOpenChange={setShowPreview}>
-        <AlertDialogContent className="max-w-3xl">
+        <AlertDialogContent className="max-w-4xl">
           <AlertDialogHeader>
             <AlertDialogTitle>{media.name}</AlertDialogTitle>
           </AlertDialogHeader>
@@ -151,8 +219,15 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
                 className="w-full h-auto rounded-lg"
               />
             ) : (
-              <div className="aspect-video bg-muted flex items-center justify-center rounded-lg">
-                <FileVideo className="w-24 h-24 text-muted-foreground" />
+              <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                <video
+                  src={media.url}
+                  controls
+                  className="w-full h-full"
+                  preload="metadata"
+                >
+                  Your browser does not support the video tag.
+                </video>
               </div>
             )}
           </div>

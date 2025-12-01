@@ -4,7 +4,7 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
   import.meta.env.REACT_APP_API_URL || 
-  'http://localhost:4000';
+  'https://well2day-server-ghcvbyaed8cndhgt.centralindia-01.azurewebsites.net';
 
 /**
  * API Endpoints
@@ -147,6 +147,9 @@ export const api = {
   getBMIStats: () => fetchAPI(API_ENDPOINTS.ANALYTICS.BMI_STATS),
   getUserActivity: () => fetchAPI(API_ENDPOINTS.ANALYTICS.USER_ACTIVITY),
   getWeightClassification: () => fetchAPI(API_ENDPOINTS.ANALYTICS.WEIGHT_CLASSIFICATION),
+
+  // Users
+  getAllUsers: () => fetchAPI('/api/admin/users'),
 
   // Media
   uploadMedia: async (formData: FormData) => {

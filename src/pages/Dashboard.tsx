@@ -78,7 +78,7 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Empty State Toggle */}
-      <div className="flex items-center justify-end gap-2 mb-4 p-3 bg-muted/30 rounded-lg border border-border">
+      {/* <div className="flex items-center justify-end gap-2 mb-4 p-3 bg-muted/30 rounded-lg border border-border">
         <Eye className="w-4 h-4 text-muted-foreground" />
         <Label htmlFor="dashboard-empty-state" className="text-sm text-muted-foreground cursor-pointer">
           Show Empty State (Demo)
@@ -88,7 +88,7 @@ const Dashboard = () => {
           checked={showEmptyState}
           onCheckedChange={setShowEmptyState}
         />
-      </div>
+      </div> */}
 
       {!hasData ? (
           <EmptyState />

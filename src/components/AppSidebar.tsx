@@ -48,21 +48,25 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
-      <SidebarHeader className="border-b border-border p-4">
-        <div className="flex items-center gap-3">
+    <Sidebar className={isCollapsed ? "w-16" : "w-60"} collapsible="icon">
        
-            {/* <Activity className="w-6 h-6 text-primary-foreground" /> */}
-            <img src="https://well2day.in/assets/img/Group%202325.png" className="h-6 w-auto" alt="logo" />
-          
-          {/* {!isCollapsed && (
-            <div>
-              <h1 className="text-lg font-bold text-foreground">BMI Admin</h1>
-              <p className="text-xs text-muted-foreground">Health Analytics</p>
-            </div>
-          )} */}
-        </div>
-      </SidebarHeader>
+ <SidebarHeader className="border-b border-border px-2 py-4"> 
+  <div className="flex items-center">
+    <img
+      src="https://well2day.in/assets/img/Group%202325.png"
+      className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} object-contain flex-shrink-0`}
+      alt="logo"
+    />
+
+    {!isCollapsed && (
+      <h1 className="ml-3 text-lg font-bold text-foreground">
+        Well2Day Admin
+      </h1>
+    )}
+  </div>
+</SidebarHeader>
+
+
 
       <SidebarContent>
         <SidebarGroup>

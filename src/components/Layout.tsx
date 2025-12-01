@@ -11,9 +11,9 @@ export function Layout({ children }: LayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 h-14 flex items-center px-4">
+          {/* <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 h-16 flex items-center px-4">
             <SidebarTrigger />
-          </header>
+          </header> */}
           <main className="flex-1">
             {children}
           </main>

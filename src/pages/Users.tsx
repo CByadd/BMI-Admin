@@ -5,12 +5,20 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Users as UsersIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 interface User {
   id: string;
   name: string;
   mobile: string;
   createdAt: string;
+  totalBMIRecords?: number;
+  latestBMI?: {
+    bmi: number;
+    category: string;
+    timestamp: string;
+    screenId: string;
+  } | null;
 }
 
 const Users = () => {
@@ -26,17 +34,20 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // TODO: Implement API call to fetch users
-      // const response = await api.getAllUsers();
-      // For now, using empty array
-      setUsers([]);
-    } catch (error) {
+      const response = await api.getAllUsers() as { ok: boolean; users: User[]; total: number };
+      if (response.ok && response.users) {
+        setUsers(response.users);
+      } else {
+        setUsers([]);
+      }
+    } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
         title: "Error",
-        description: "Failed to load users",
+        description: error.message || "Failed to load users",
         variant: "destructive",
       });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -84,7 +95,7 @@ const Users = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -93,6 +104,19 @@ const Users = () => {
               <div>
                 <p className="text-2xl font-bold text-foreground">{users.length}</p>
                 <p className="text-xs text-muted-foreground">Total Users</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                <UsersIcon className="w-5 h-5 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">
+                  {users.reduce((sum, u) => sum + (u.totalBMIRecords || 0), 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total BMI Records</p>
               </div>
             </div>
           </Card>
@@ -119,8 +143,28 @@ const Users = () => {
                       <p className="text-sm text-muted-foreground">{user.mobile}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Joined: {new Date(user.createdAt).toLocaleDateString()}</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Joined: {new Date(user.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {user.totalBMIRecords !== undefined && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="secondary">
+                          {user.totalBMIRecords} BMI record{user.totalBMIRecords !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                    )}
+                    {user.latestBMI && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">Latest:</span>
+                        <Badge variant="outline">
+                          BMI {user.latestBMI.bmi.toFixed(1)} ({user.latestBMI.category})
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          {new Date(user.latestBMI.timestamp).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>

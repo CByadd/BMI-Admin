@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Eye, Clock, AlertCircle, Loader2, Image, Video, GripVertical } from "lucide-react";
 import { PlaylistSlot } from "@/components/playlist/PlaylistSlot";
 import { toast } from "@/hooks/use-toast";
@@ -156,13 +158,22 @@ const PlaylistEditor = () => {
   };
 
   const filledSlots = slots.filter(slot => slot !== null).length;
-  const isComplete = filledSlots === 8;
 
   const handleSave = async () => {
-    if (!isComplete) {
+    // Check if at least one slot is filled
+    if (filledSlots === 0) {
       toast({
-        title: "Incomplete playlist",
-        description: "Please fill all 8 slots before saving.",
+        title: "Empty playlist",
+        description: "Please add at least one media item to the playlist before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!playlistName || playlistName.trim() === '') {
+      toast({
+        title: "Name required",
+        description: "Please enter a playlist name before saving.",
         variant: "destructive",
       });
       return;
@@ -171,25 +182,36 @@ const PlaylistEditor = () => {
     try {
       setSaving(true);
       if (id && id !== "new") {
-        await api.updatePlaylist(id, { slots });
-      } else {
+        // Update existing playlist - include name and slots (allow empty slots)
+        await api.updatePlaylist(id, { name: playlistName.trim(), slots });
         toast({
-          title: "Error",
-          description: "Cannot save new playlist without name. Please create playlist first.",
-          variant: "destructive",
+          title: "Playlist saved",
+          description: "Your playlist has been saved successfully.",
         });
-        return;
+        navigate("/playlists");
+      } else {
+        // Create new playlist if it doesn't exist
+        const response = await api.createPlaylist({
+          name: playlistName.trim(),
+          slots,
+        }) as { ok: boolean; playlist: { id: string } };
+        
+        if (response.ok && response.playlist) {
+          toast({
+            title: "Playlist created",
+            description: "Your playlist has been created successfully.",
+          });
+          // Navigate to the newly created playlist's edit page
+          navigate(`/playlists/${response.playlist.id}/edit`);
+        } else {
+          throw new Error("Failed to create playlist");
+        }
       }
-      toast({
-        title: "Playlist saved",
-        description: "Your playlist has been saved successfully.",
-      });
-      navigate("/playlists");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving playlist:', error);
       toast({
         title: "Error",
-        description: "Failed to save playlist",
+        description: error?.message || "Failed to save playlist",
         variant: "destructive",
       });
     } finally {
@@ -205,6 +227,11 @@ const PlaylistEditor = () => {
         variant: "destructive",
       });
       return;
+    }
+    // Save current state before preview (with empty slots allowed)
+    if (id && id !== "new" && playlistName.trim()) {
+      // Auto-save before preview
+      api.updatePlaylist(id, { name: playlistName.trim(), slots }).catch(console.error);
     }
     navigate(`/playlists/${id}/preview`);
   };
@@ -242,7 +269,7 @@ const PlaylistEditor = () => {
                 <Eye className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Preview</span>
               </Button>
-              <Button onClick={handleSave} disabled={!isComplete || saving} className="flex-1 sm:flex-none">
+              <Button onClick={handleSave} disabled={filledSlots === 0 || saving} className="flex-1 sm:flex-none">
                 <Save className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">{saving ? "Saving..." : "Save Playlist"}</span>
                 <span className="sm:hidden">{saving ? "Saving..." : "Save"}</span>
@@ -254,6 +281,20 @@ const PlaylistEditor = () => {
 
       <main className="container mx-auto px-4 py-8 pb-80">
         <div className="space-y-6">
+          {/* Playlist Name Input */}
+          <Card className="p-4">
+            <div className="space-y-2">
+              <Label htmlFor="playlist-name">Playlist Name</Label>
+              <Input
+                id="playlist-name"
+                value={playlistName}
+                onChange={(e) => setPlaylistName(e.target.value)}
+                placeholder="Enter playlist name..."
+                className="max-w-md"
+              />
+            </div>
+          </Card>
+
           {/* Status Banner */}
           <Card className="p-4">
             <div className="flex items-center justify-between">
@@ -274,11 +315,11 @@ const PlaylistEditor = () => {
                 </div>
               </div>
               
-              {!isComplete && (
-                <div className="flex items-center gap-2 text-warning">
+              {filledSlots < 8 && (
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <AlertCircle className="w-5 h-5" />
-                  <span className="text-sm font-medium">
-                    {8 - filledSlots} slot{8 - filledSlots !== 1 ? 's' : ''} remaining
+                  <span className="text-sm">
+                    {8 - filledSlots} empty slot{8 - filledSlots !== 1 ? 's' : ''} (optional)
                   </span>
                 </div>
               )}
@@ -304,7 +345,8 @@ const PlaylistEditor = () => {
             <Card className="p-6 bg-muted/50">
               <h3 className="font-semibold text-foreground mb-2">Getting Started</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Each playlist requires exactly 8 content slots</li>
+                <li>• Playlists can have up to 8 content slots (empty slots are allowed)</li>
+                <li>• Add at least one media item to save the playlist</li>
                 <li>• Drag assets from your media library below or upload new files</li>
                 <li>• Set display duration for images (videos use actual length)</li>
                 <li>• Preview your playlist before saving</li>

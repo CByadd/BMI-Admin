@@ -70,7 +70,7 @@ const Media = () => {
           tags: item.tags || [],
           uploadDate: item.uploadDate || item.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
           size: formatFileSize(item.size || 0),
-          publicId: item.publicId || item.id
+          publicId: item.publicId || item.id || item.public_id
         }));
         
         console.log('[MEDIA_PAGE] Transformed media items:', transformedMedia.length);
