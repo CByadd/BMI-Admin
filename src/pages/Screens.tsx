@@ -135,25 +135,6 @@ const Screens = () => {
     }
   };
 
-  const handleFlowTypeChange = async (screenId: string, flowType: string) => {
-    try {
-      await api.updateFlowType(screenId, flowType);
-      toast({
-        title: "Success",
-        description: `Flow type updated to ${flowType}`,
-      });
-      // Refresh screens to show updated flow type
-      await fetchScreens();
-    } catch (error) {
-      console.error('Error updating flow type:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update flow type",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleDeleteScreen = async (screenId: string) => {
     try {
       await api.deletePlayer(screenId);
@@ -293,7 +274,6 @@ const Screens = () => {
                   screen={screen}
                   onEdit={handleEditScreen}
                   onDelete={handleDeleteScreen}
-                  onFlowTypeChange={handleFlowTypeChange}
                 />
               ))}
             </div>
