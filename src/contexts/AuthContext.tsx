@@ -30,24 +30,24 @@ const STORAGE_KEYS = {
 // Token expiration: 60 days for all tokens
 const TOKEN_EXPIRY_DAYS = 60;
 
+// Check if token is expired (helper function outside component)
+const isTokenExpired = (): boolean => {
+  try {
+    const tokenExpiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
+    if (!tokenExpiry) return true;
+    
+    const expiryDate = new Date(tokenExpiry);
+    const now = new Date();
+    return expiryDate <= now;
+  } catch (error) {
+    return true;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Check if token is expired
-  const isTokenExpired = (): boolean => {
-    try {
-      const tokenExpiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
-      if (!tokenExpiry) return true;
-      
-      const expiryDate = new Date(tokenExpiry);
-      const now = new Date();
-      return expiryDate <= now;
-    } catch (error) {
-      return true;
-    }
-  };
 
   // Initialize auth state from localStorage
   useEffect(() => {
