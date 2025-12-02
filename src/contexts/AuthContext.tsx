@@ -27,16 +27,27 @@ const STORAGE_KEYS = {
   REMEMBER_ME: 'bmi_admin_remember',
 };
 
-// Token expiration: 30 days for "remember me", 7 days otherwise
-const TOKEN_EXPIRY_DAYS = {
-  REMEMBER: 30,
-  DEFAULT: 7,
-};
+// Token expiration: 60 days for all tokens
+const TOKEN_EXPIRY_DAYS = 60;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check if token is expired
+  const isTokenExpired = (): boolean => {
+    try {
+      const tokenExpiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
+      if (!tokenExpiry) return true;
+      
+      const expiryDate = new Date(tokenExpiry);
+      const now = new Date();
+      return expiryDate <= now;
+    } catch (error) {
+      return true;
+    }
+  };
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -47,16 +58,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const tokenExpiry = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
 
         if (storedToken && storedUser && tokenExpiry) {
-          const expiryDate = new Date(tokenExpiry);
-          const now = new Date();
-
-          // Check if token is still valid
-          if (expiryDate > now) {
+          // Check if token is still valid based on expiry date
+          if (!isTokenExpired()) {
+            // Token exists and hasn't expired locally, set auth state
+            // Server-side validation will happen on first API call
             setToken(storedToken);
             setUser(JSON.parse(storedUser));
           } else {
-            // Token expired, clear storage
+            // Token expired based on expiry date, clear storage and logout
             clearAuthData();
+            // Redirect to login if not already there
+            if (window.location.pathname !== '/') {
+              window.location.href = '/';
+            }
           }
         }
       } catch (error) {
@@ -70,6 +84,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, []);
 
+  // Periodic check for token expiration (every 5 minutes)
+  useEffect(() => {
+    if (!token) return;
+
+    const checkTokenExpiry = () => {
+      if (isTokenExpired()) {
+        console.log('Token expired, logging out automatically');
+        clearAuthData();
+        // Redirect to login if not already there
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
+      }
+    };
+
+    // Check immediately
+    checkTokenExpiry();
+
+    // Set up interval to check every 5 minutes
+    const interval = setInterval(checkTokenExpiry, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [token]);
+
   const clearAuthData = () => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
@@ -80,9 +118,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const saveAuthData = (authToken: string, userData: User, rememberMe: boolean = false) => {
-    const expiryDays = rememberMe ? TOKEN_EXPIRY_DAYS.REMEMBER : TOKEN_EXPIRY_DAYS.DEFAULT;
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + expiryDays);
+    expiryDate.setDate(expiryDate.getDate() + TOKEN_EXPIRY_DAYS);
 
     localStorage.setItem(STORAGE_KEYS.TOKEN, authToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
@@ -122,7 +159,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     clearAuthData();
-    // Navigation will be handled by the component calling logout
+    // Redirect to login page
+    if (window.location.pathname !== '/') {
+      window.location.href = '/';
+    }
   };
 
   const refreshToken = async () => {

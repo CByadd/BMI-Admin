@@ -79,16 +79,52 @@ function getAuthToken(): string | null {
 }
 
 /**
+ * Check if user is authenticated before making API calls
+ */
+function checkAuthBeforeRequest(): boolean {
+  const token = getAuthToken();
+  if (!token) {
+    console.warn('API call attempted without authentication token');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Handle 401 errors by clearing auth and redirecting to login
+ */
+function handleUnauthorized() {
+  // Clear all auth-related storage
+  localStorage.removeItem('bmi_admin_token');
+  localStorage.removeItem('bmi_admin_user');
+  localStorage.removeItem('bmi_admin_token_expiry');
+  localStorage.removeItem('bmi_admin_remember');
+  
+  // Redirect to login page if we're not already there
+  if (window.location.pathname !== '/') {
+    window.location.href = '/';
+  }
+}
+
+/**
  * Generic API fetch function with auth
  */
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
   
+  // Check if token exists before making request
+  if (!token) {
+    const error = new Error('Access token required');
+    (error as any).status = 401;
+    (error as any).isAuthError = true;
+    throw error;
+  }
+  
   const config: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     },
     ...options,
@@ -98,14 +134,16 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
     const response = await fetch(url, config);
     
     if (!response.ok) {
-      // Handle 401 (Unauthorized) errors gracefully
+      // Handle 401 (Unauthorized) errors
       if (response.status === 401) {
-        // Clear invalid token
-        localStorage.removeItem('bmi_admin_token');
-        // Don't log 401 errors as they're expected when not authenticated
-        const error = await response.json().catch(() => ({ error: 'Unauthorized' }));
-        const authError = new Error(error.error || 'Unauthorized');
+        const errorData = await response.json().catch(() => ({ error: 'Unauthorized' }));
+        const authError = new Error(errorData.error || 'Access token required');
         (authError as any).status = 401;
+        (authError as any).isAuthError = true;
+        
+        // Clear invalid token and redirect to login
+        handleUnauthorized();
+        
         throw authError;
       }
       
@@ -115,8 +153,18 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
     
     return await response.json();
   } catch (error: any) {
+    // Re-throw auth errors as-is
+    if (error.isAuthError) {
+      throw error;
+    }
+    
+    // Handle network errors that might be auth-related
+    if (error.message && error.message.includes('token')) {
+      handleUnauthorized();
+    }
+    
     // Only log non-401 errors to reduce console noise
-    if (error.status !== 401 && !(error instanceof Error && error.message.includes('Unauthorized'))) {
+    if (error.status !== 401) {
       console.error(`API Error [${endpoint}]:`, error);
     }
     throw error;
