@@ -84,10 +84,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
   const loadPlaylists = async () => {
     setIsLoadingPlaylists(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/playlists`);
-      const data = await response.json();
-      if (data.ok && data.playlists) {
-        setPlaylists(data.playlists);
+      const response = await api.getAllPlaylists() as { ok: boolean; playlists: Playlist[] };
+      if (response.ok && response.playlists) {
+        setPlaylists(response.playlists);
       }
     } catch (error) {
       console.error("Error loading playlists:", error);

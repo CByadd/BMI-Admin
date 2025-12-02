@@ -98,13 +98,27 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
     const response = await fetch(url, config);
     
     if (!response.ok) {
+      // Handle 401 (Unauthorized) errors gracefully
+      if (response.status === 401) {
+        // Clear invalid token
+        localStorage.removeItem('bmi_admin_token');
+        // Don't log 401 errors as they're expected when not authenticated
+        const error = await response.json().catch(() => ({ error: 'Unauthorized' }));
+        const authError = new Error(error.error || 'Unauthorized');
+        (authError as any).status = 401;
+        throw authError;
+      }
+      
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || `HTTP error! status: ${response.status}`);
     }
     
     return await response.json();
-  } catch (error) {
-    console.error(`API Error [${endpoint}]:`, error);
+  } catch (error: any) {
+    // Only log non-401 errors to reduce console noise
+    if (error.status !== 401 && !(error instanceof Error && error.message.includes('Unauthorized'))) {
+      console.error(`API Error [${endpoint}]:`, error);
+    }
     throw error;
   }
 }
