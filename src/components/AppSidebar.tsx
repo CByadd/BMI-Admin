@@ -1,5 +1,5 @@
 import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users, Shield } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate,useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -45,6 +45,9 @@ export function AppSidebar() {
     navigate("/");
   };
 
+const location = useLocation();
+
+
   const isCollapsed = state === "collapsed";
 
   return (
@@ -70,46 +73,77 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          {/* <SidebarGroupLabel>Navigation</SidebarGroupLabel> */}
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-muted text-primary font-medium"
-                          : "hover:bg-muted/50"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+ {navigationItems.map((item) => {
+  const isActive =
+    location.pathname === item.url ||
+    location.pathname.startsWith(item.url + "/");
+
+  return (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        className="
+          rounded-md
+          transition-colors
+          hover:bg-muted
+          data-[active=true]:bg-primary/5
+          data-[active=true]:border
+          data-[active=true]:border-primary/30
+          data-[active=true]:text-primary
+        "
+      >
+        <NavLink
+          to={item.url}
+          className="flex items-center gap-3 px-3 py-2"
+        >
+          <item.icon className="h-4 w-4" />
+          {!isCollapsed && <span>{item.title}</span>}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+})}
+
+
+
+
               {user?.role === "super_admin" &&
-                adminNavigationItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end
-                        className={({ isActive }) =>
-                          isActive
-                            ? "bg-muted text-primary font-medium"
-                            : "hover:bg-muted/50"
-                        }
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {!isCollapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+  adminNavigationItems.map((item) => {
+    const isActive =
+      location.pathname === item.url ||
+      location.pathname.startsWith(item.url + "/");
+
+    return (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive}
+          className="
+            rounded-md
+            transition-colors
+            hover:bg-muted
+            data-[active=true]:bg-primary/5
+            data-[active=true]:border
+            data-[active=true]:border-primary/30
+            data-[active=true]:text-primary
+          "
+        >
+          <NavLink
+            to={item.url}
+            className="flex items-center gap-3 px-3 py-2"
+          >
+            <item.icon className="h-4 w-4" />
+            {!isCollapsed && <span>{item.title}</span>}
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  })}
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

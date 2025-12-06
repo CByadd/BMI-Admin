@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Screens from "./pages/Screens";
 import ScreenDetails from "./pages/ScreenDetails";
+import ScreenEdit from "./pages/ScreenEdit";
 import Users from "./pages/Users";
 import Media from "./pages/Media";
 import Playlists from "./pages/Playlists";
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout><ScreenDetails /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/screens/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <Layout><ScreenEdit /></Layout>
                 </ProtectedRoute>
               } 
             />

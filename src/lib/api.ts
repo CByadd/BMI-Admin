@@ -4,6 +4,7 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
   import.meta.env.REACT_APP_API_URL || 
+  // 'http://localhost:4000';
   'https://bmi-server-eight.vercel.app';
 
 /**
@@ -209,6 +210,14 @@ export const api = {
   getBMIStats: () => fetchAPI(API_ENDPOINTS.ANALYTICS.BMI_STATS),
   getUserActivity: () => fetchAPI(API_ENDPOINTS.ANALYTICS.USER_ACTIVITY),
   getWeightClassification: () => fetchAPI(API_ENDPOINTS.ANALYTICS.WEIGHT_CLASSIFICATION),
+  getScreenBMIRecords: (screenId: string, dateFilter?: string, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (dateFilter) params.append('dateFilter', dateFilter);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const queryString = params.toString();
+    return fetchAPI(`/api/admin/screen/${screenId}/bmi-records${queryString ? `?${queryString}` : ''}`);
+  },
 
   // Users
   getAllUsers: () => fetchAPI('/api/admin/users'),

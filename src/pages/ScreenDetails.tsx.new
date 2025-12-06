@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Activity, ArrowLeft, Edit, MapPin, Monitor, Clock, Calendar, 
-  Download, Search, Users, TrendingUp, CheckCircle, ImageIcon, List, Loader2
+  Download, Search, Users, TrendingUp, ImageIcon, List, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +60,7 @@ const ScreenDetails = () => {
   const [loading, setLoading] = useState(true);
   const [screenData, setScreenData] = useState<ScreenData | null>(null);
   const [userLogs, setUserLogs] = useState<UserLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<UserLog[]>([]);
   const [stats, setStats] = useState({
     todayUsers: 0,
     totalUsers: 0,
@@ -73,187 +74,69 @@ const ScreenDetails = () => {
     loadingMore: false
   });
 
-  useEffect(() => {
-    if (id) {
-      fetchScreenData();
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (id) {
-      fetchBMIRecords();
-    }
-  }, [id, dateFilter, pagination.page, pagination.limit]);
-
-  useEffect(() => {
-    if (screenData) {
-      setScreenData(prev => prev ? {
-        ...prev,
-        todayUsers: stats.todayUsers,
-        totalUsers: stats.totalUsers,
-        avgBMI: stats.avgBMI,
-      } : null);
-    }
-  }, [stats.todayUsers, stats.totalUsers, stats.avgBMI]);
-
-  const fetchScreenData = async () => {
+  // Fetch screen data
+  const fetchScreenData = useCallback(async () => {
+    if (!id) return;
+    
     try {
-      const response = await api.getPlayer(id!) as { ok: boolean; player: any };
-      
-      if (response.ok && response.player) {
-        const player = response.player;
-        const lastSeen = new Date(player.lastSeen);
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        
-        const isOnline = player.isActive && lastSeen >= fiveMinutesAgo;
-        const isOffline = !player.isActive || lastSeen < oneDayAgo;
-        
-        let status: "online" | "offline" | "maintenance" = "offline";
-        if (isOnline) {
-          status = "online";
-        } else if (isOffline) {
-          status = "offline";
-        } else {
-          status = "maintenance";
-        }
-
-        // Calculate time ago
-        const timeDiff = Date.now() - lastSeen.getTime();
-        const minutesAgo = Math.floor(timeDiff / (1000 * 60));
-        const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
-        const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-        
-        let lastSync = "";
-        if (minutesAgo < 60) {
-          lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
-        } else if (hoursAgo < 24) {
-          lastSync = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
-        } else {
-          lastSync = `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
-        }
-
-        const flowType = player.flowType || "Normal";
-        const flowTypeLabel = flowType === "Normal" ? "Normal" : `Flow ${flowType}`;
-        const model = `${flowTypeLabel} - ${player.screenWidth || 'Unknown'}x${player.screenHeight || 'Unknown'} Display`;
-        const screenSize = `${player.screenWidth || 'Unknown'}x${player.screenHeight || 'Unknown'}`;
-
-        // Parse location for coordinates if available
-        let latitude: number | undefined;
-        let longitude: number | undefined;
-        if (player.location) {
-          // Try to extract coordinates from location string if it contains them
-          const coordMatch = player.location.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
-          if (coordMatch) {
-            latitude = parseFloat(coordMatch[1]);
-            longitude = parseFloat(coordMatch[2]);
-          }
-        }
-
-        setScreenData({
-          id: player.screenId,
-          name: player.deviceName || player.screenId,
-          model,
-          status,
-          location: player.location || "Unknown Location",
-          latitude,
-          longitude,
-          flow: flowTypeLabel,
-          screenSize,
-          onTime: "08:00 AM", // This could be calculated or stored separately
-          runtime: "N/A", // This could be calculated from lastSeen
-          lastSync,
-          todayUsers: 0, // Will be updated from stats
-          totalUsers: 0, // Will be updated from stats
-          avgBMI: 0, // Will be updated from stats
-        });
-      }
+      const response = await api.get(`/api/screens/${id}`);
+      setScreenData(response.data);
     } catch (error) {
       console.error('Error fetching screen data:', error);
       toast({
         title: "Error",
-        description: "Failed to load screen data",
+        description: "Failed to fetch screen data",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, toast]);
 
-  const fetchBMIRecords = async (loadMore = false) => {
+  // Fetch BMI records
+  const fetchBMIRecords = useCallback(async (loadMore = false) => {
     if (!id) return;
     
     try {
       const page = loadMore ? pagination.page + 1 : 1;
-      const limit = pagination.limit;
-      
       setPagination(prev => ({
         ...prev,
         loadingMore: true,
         ...(loadMore ? {} : { page: 1 })
       }));
+
+      const response = await api.get(`/api/screens/${id}/bmi-records`, {
+        params: {
+          page,
+          limit: pagination.limit,
+          dateFilter
+        }
+      });
+
+      const { records, stats, pagination: paginationData } = response.data;
       
-      const response = await api.getScreenBMIRecords(
-        id, 
-        dateFilter,
-        undefined,
-        undefined,
-        page,
-        limit
-      ) as { 
-        ok: boolean; 
-        records: UserLog[]; 
-        stats: { todayUsers: number; totalUsers: number; avgBMI: number };
-        pagination: {
-          total: number;
-          page: number;
-          limit: number;
-          totalPages: number;
-          hasNextPage: boolean;
-          hasPreviousPage: boolean;
-        };
-      };
+      setUserLogs(prev => loadMore ? [...prev, ...records] : records);
+      setFilteredLogs(loadMore ? [...userLogs, ...records] : records);
+      setStats(stats);
       
-      if (response.ok) {
-        const formattedLogs = response.records.map((record) => ({
-          id: record.id,
-          date: record.date,
-          userName: record.userName,
-          mobile: record.mobile,
-          weight: record.weight,
-          height: record.height,
-          bmi: record.bmi,
-          category: record.category,
-          location: record.location,
-          waterIntake: record.waterIntake,
-        }));
-        
-        setUserLogs(prev => loadMore ? [...prev, ...formattedLogs] : formattedLogs);
-        setStats(response.stats);
-        
-        setPagination(prev => ({
-          ...prev,
-          page: response.pagination.page,
-          total: response.pagination.total,
-          hasMore: response.pagination.hasNextPage,
-          loadingMore: false
-        }));
-      }
+      setPagination(prev => ({
+        ...prev,
+        page: paginationData.page,
+        total: paginationData.total,
+        hasMore: paginationData.hasNextPage,
+        loadingMore: false
+      }));
     } catch (error) {
       console.error('Error fetching BMI records:', error);
       toast({
         title: "Error",
-        description: "Failed to load user logs",
+        description: "Failed to fetch BMI records",
         variant: "destructive",
       });
-      
-      setPagination(prev => ({
-        ...prev,
-        loadingMore: false
-      }));
+      setPagination(prev => ({ ...prev, loadingMore: false }));
     }
-  };
-  
+  }, [id, dateFilter, pagination.limit, pagination.page, userLogs, toast]);
+
   // Handle scroll for infinite loading
   const handleScroll = useCallback(() => {
     if (
@@ -265,17 +148,36 @@ const ScreenDetails = () => {
     }
     
     fetchBMIRecords(true);
-  }, [pagination.loadingMore, pagination.hasMore]);
-  
+  }, [pagination.loadingMore, pagination.hasMore, fetchBMIRecords]);
+
+  // Add scroll event listener
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  const filteredLogs = userLogs.filter((log) =>
-    log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.mobile.includes(searchQuery)
-  );
+  // Initial data fetch
+  useEffect(() => {
+    if (id) {
+      fetchScreenData();
+      fetchBMIRecords();
+    }
+  }, [id, fetchScreenData, fetchBMIRecords]);
+
+  // Filter logs based on search query
+  useEffect(() => {
+    if (!searchQuery) {
+      setFilteredLogs(userLogs);
+      return;
+    }
+    
+    const filtered = userLogs.filter(log => 
+      log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.mobile.includes(searchQuery)
+    );
+    
+    setFilteredLogs(filtered);
+  }, [searchQuery, userLogs]);
 
   if (loading) {
     return (
@@ -348,10 +250,6 @@ const ScreenDetails = () => {
                 <List className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Playlists</span>
               </Button>
-              {/* <Badge className={screenData.status === "online" ? "bg-success/10 text-success border-success/20" : ""}>
-                <div className="w-2 h-2 rounded-full bg-success mr-2" />
-                Online
-              </Badge> */}
             </div>
           </div>
         </div>
@@ -411,7 +309,7 @@ const ScreenDetails = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">Screen Information</h2>
-            <Button variant="outline" size="sm" onClick={() => navigate(`/screens/${id}/edit`)}>
+            <Button variant="outline" size="sm">
               <Edit className="w-4 h-4 mr-2" />
               Edit Info
             </Button>
@@ -465,10 +363,9 @@ const ScreenDetails = () => {
             </div>
           </div>
         </Card>
-      
 
-      {/* User Logs Section */}
-      <Card className="p-4 sm:p-6">
+        {/* User Logs Section */}
+        <Card className="p-4 sm:p-6">
           <div className="space-y-6">
             <div className="flex flex-col gap-4">
               <div>
@@ -531,7 +428,9 @@ const ScreenDetails = () => {
                       <td className="px-4 py-3 text-sm font-medium text-foreground">{log.bmi}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{log.waterIntake || '-'}</td>
                       <td className="px-4 py-3">
-                        <Badge className={labelColors[log.category] || labelColors.Normal}>{log.category}</Badge>
+                        <Badge className={labelColors[log.category] || labelColors.Normal}>
+                          {log.category}
+                        </Badge>
                       </td>
                     </tr>
                   ))}
@@ -539,25 +438,22 @@ const ScreenDetails = () => {
               </table>
             </div>
 
-          {filteredLogs.length === 0 && (
-  <div className="text-center py-12">
-    <Monitor className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-    <p className="text-muted-foreground">No user logs found</p>
-  </div>
-)}
-
-{pagination.loadingMore && (
-  <div className="flex justify-center py-4">
-    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-  </div>
-)}
-
-{!pagination.loadingMore && !pagination.hasMore && userLogs.length > 0 && (
-  <div className="text-center py-4 text-muted-foreground">
-    No more records to load
-  </div>
-)}
-
+            {filteredLogs.length === 0 && (
+              <div className="text-center py-12">
+                <Monitor className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No user logs found</p>
+              </div>
+            )}
+            {pagination.loadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            )}
+            {!pagination.loadingMore && !pagination.hasMore && userLogs.length > 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                No more records to load
+              </div>
+            )}
           </div>
         </Card>
       </main>

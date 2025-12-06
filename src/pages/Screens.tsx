@@ -224,7 +224,7 @@ const Screens = () => {
                   </Button>
                 </div>
               </div>
-              <Button 
+              {/* <Button 
                 className="bg-gradient-primary hover:opacity-90 w-full sm:hidden"
                 onClick={() => setIsModalOpen(true)}
               >
@@ -237,7 +237,7 @@ const Screens = () => {
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Connect Screen
-              </Button>
+              </Button> */}
             </div>
 
             {/* Stats Summary */}

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Monitor, MapPin, Clock, Eye, Edit, Trash2, Settings } from "lucide-react";
+import { Monitor, MapPin, Clock, Eye, Edit, Trash2, Settings, ListVideo } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EditScreenModal from "./EditScreenModal";
+import AssignPlaylistModal from "./AssignPlaylistModal";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScreenCardProps {
@@ -58,6 +59,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
   const config = statusConfig[screen.status];
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isAssignPlaylistOpen, setIsAssignPlaylistOpen] = useState(false);
 
   const handleEdit = (updatedScreen: any) => {
     onEdit?.(updatedScreen);
@@ -145,6 +147,14 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
           <Button 
             className="flex-1" 
             variant="outline"
+            onClick={() => setIsAssignPlaylistOpen(true)}
+          >
+            <ListVideo className="w-4 h-4 mr-2" />
+            Assign Playlist
+          </Button>
+          <Button 
+            className="flex-1" 
+            variant="outline"
             onClick={() => navigate(`/screens/${screen.id}`)}
           >
             <Eye className="w-4 h-4 mr-2" />
@@ -190,6 +200,12 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AssignPlaylistModal
+        open={isAssignPlaylistOpen}
+        onOpenChange={setIsAssignPlaylistOpen}
+        screenId={screen.id}
+      />
     </Card>
   );
 };
