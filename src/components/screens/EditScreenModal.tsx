@@ -196,62 +196,69 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[90vw] max-w-[95vw] w-full">
         <DialogHeader>
           <DialogTitle>Edit Screen - {screen.id}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Screen Name (Device Name)</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter screen name"
-                required
-              />
+            {/* First row: Screen Name and Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Screen Name (Device Name)</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter screen name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="Enter location"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Enter location"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
-              <Input
-                id="heightCalibration"
-                type="number"
-                step="0.1"
-                value={formData.heightCalibration ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData({ 
-                    ...formData, 
-                    heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
-                  });
-                }}
-                placeholder="Leave empty for default (0)"
-              />
-              <p className="text-xs text-muted-foreground">
-                Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="flowType">Flow Type</Label>
-              <Input
-                id="flowType"
-                value={screen.flowType || "Normal"}
-                disabled
-                className="bg-muted cursor-not-allowed"
-              />
-              <p className="text-xs text-muted-foreground">
-                Flow type is determined by the app version and cannot be changed here
-              </p>
+
+            {/* Second row: Height Calibration and Flow Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
+                <Input
+                  id="heightCalibration"
+                  type="number"
+                  step="0.1"
+                  value={formData.heightCalibration ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                    });
+                  }}
+                  placeholder="Leave empty for default (0)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="flowType">Flow Type</Label>
+                <Input
+                  id="flowType"
+                  value={screen.flowType || "Normal"}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Flow type is determined by the app version and cannot be changed here
+                </p>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="playlist">Assign Playlist</Label>
