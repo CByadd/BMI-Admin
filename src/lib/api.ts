@@ -239,15 +239,49 @@ export const api = {
   // Media
   uploadMedia: async (formData: FormData) => {
     const url = `${API_BASE_URL}${API_ENDPOINTS.MEDIA.UPLOAD}`;
+    const token = getAuthToken();
+    
+    // Check if token exists before making request
+    if (!token) {
+      const error = new Error('Access token required');
+      (error as any).status = 401;
+      (error as any).isAuthError = true;
+      handleUnauthorized();
+      throw error;
+    }
+    
     const response = await fetch(url, {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Don't set Content-Type header - let browser set it with boundary for FormData
+      },
       body: formData,
-      // Don't set Content-Type header - let browser set it with boundary
     });
     
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      
+      // Handle 401 (Unauthorized) errors
+      if (response.status === 401) {
+        const authError = new Error(errorMessage);
+        (authError as any).status = 401;
+        (authError as any).isAuthError = true;
+        handleUnauthorized();
+        throw authError;
+      }
+      
+      // Handle 500 errors that might be authentication-related
+      if (response.status === 500 && (errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('token'))) {
+        const authError = new Error('Authentication failed. Please log in again.');
+        (authError as any).status = 500;
+        (authError as any).isAuthError = true;
+        handleUnauthorized();
+        throw authError;
+      }
+      
+      throw new Error(errorMessage);
     }
     
     return await response.json();
