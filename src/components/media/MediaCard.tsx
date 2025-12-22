@@ -207,24 +207,25 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
 
       {/* Preview Dialog */}
       <AlertDialog open={showPreview} onOpenChange={setShowPreview}>
-        <AlertDialogContent className="max-w-4xl">
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl w-full max-h-[95vh] flex flex-col">
           <AlertDialogHeader>
-            <AlertDialogTitle>{media.name}</AlertDialogTitle>
+            <AlertDialogTitle className="truncate">{media.name}</AlertDialogTitle>
           </AlertDialogHeader>
-          <div className="my-4">
+          <div className="my-4 flex-1 overflow-auto flex items-center justify-center">
             {media.type === "image" ? (
               <img
                 src={media.url}
                 alt={media.name}
-                className="w-full h-auto rounded-lg"
+                className="max-w-full max-h-[70vh] w-auto h-auto rounded-lg object-contain"
               />
             ) : (
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
+              <div className="w-full max-w-full bg-black rounded-lg overflow-hidden">
                 <video
                   src={media.url}
                   controls
-                  className="w-full h-full"
+                  className="w-full h-auto max-h-[70vh]"
                   preload="metadata"
+                  style={{ maxWidth: '100%' }}
                 >
                   Your browser does not support the video tag.
                 </video>
