@@ -135,10 +135,12 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
     const response = await fetch(url, config);
     
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      
       // Handle 401 (Unauthorized) errors
       if (response.status === 401) {
-        const errorData = await response.json().catch(() => ({ error: 'Unauthorized' }));
-        const authError = new Error(errorData.error || 'Access token required');
+        const authError = new Error(errorMessage);
         (authError as any).status = 401;
         (authError as any).isAuthError = true;
         
@@ -148,8 +150,19 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
         throw authError;
       }
       
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      // Handle 500 errors that might be authentication-related
+      if (response.status === 500 && (errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('token'))) {
+        const authError = new Error('Authentication failed. Please log in again.');
+        (authError as any).status = 500;
+        (authError as any).isAuthError = true;
+        
+        // Clear token and redirect to login
+        handleUnauthorized();
+        
+        throw authError;
+      }
+      
+      throw new Error(errorMessage);
     }
     
     return await response.json();
