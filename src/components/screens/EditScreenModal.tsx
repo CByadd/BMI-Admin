@@ -75,7 +75,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           playlistId: player.playlistId || "none",
           playlistStartDate: player.playlistStartDate ? new Date(player.playlistStartDate) : null,
           playlistEndDate: player.playlistEndDate ? new Date(player.playlistEndDate) : null,
-          heightCalibration: player.heightCalibration ?? null,
+          heightCalibration: player.heightCalibration && player.heightCalibration !== 0 ? player.heightCalibration : null,
         }));
       }
     } catch (error) {
@@ -128,7 +128,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         deviceName: formData.name,
         location: formData.location,
         isActive: formData.isActive,
-        heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : null,
+        heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
       };
       
       // Always include playlist fields - send null to clear, or values to set
