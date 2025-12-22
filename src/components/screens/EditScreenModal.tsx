@@ -42,7 +42,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     playlistStartDate: null as Date | null,
     playlistEndDate: null as Date | null,
     isActive: screen.status !== "offline",
-    heightCalibration: 0,
+    heightCalibration: null as number | null,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -58,7 +58,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         playlistStartDate: null,
         playlistEndDate: null,
         isActive: screen.status !== "offline",
-        heightCalibration: 0,
+        heightCalibration: null,
       });
       loadPlaylists();
       loadCurrentPlaylist();
@@ -75,7 +75,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           playlistId: player.playlistId || "none",
           playlistStartDate: player.playlistStartDate ? new Date(player.playlistStartDate) : null,
           playlistEndDate: player.playlistEndDate ? new Date(player.playlistEndDate) : null,
-          heightCalibration: player.heightCalibration ?? 0,
+          heightCalibration: player.heightCalibration ?? null,
         }));
       }
     } catch (error) {
@@ -128,7 +128,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         deviceName: formData.name,
         location: formData.location,
         isActive: formData.isActive,
-        heightCalibration: formData.heightCalibration,
+        heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : null,
       };
       
       // Always include playlist fields - send null to clear, or values to set
@@ -227,12 +227,18 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 id="heightCalibration"
                 type="number"
                 step="0.1"
-                value={formData.heightCalibration}
-                onChange={(e) => setFormData({ ...formData, heightCalibration: parseFloat(e.target.value) || 0 })}
-                placeholder="0.0"
+                value={formData.heightCalibration ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                  });
+                }}
+                placeholder="Leave empty for default (0)"
               />
               <p className="text-xs text-muted-foreground">
-                Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract.
+                Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
               </p>
             </div>
             <div className="space-y-2">
