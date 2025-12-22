@@ -196,6 +196,7 @@ export const api = {
     playlistId?: string | null;
     playlistStartDate?: string | null;
     playlistEndDate?: string | null;
+    heightCalibration?: number;
   }) =>
     fetchAPI(API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), {
       method: 'PUT',

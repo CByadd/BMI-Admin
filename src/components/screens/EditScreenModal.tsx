@@ -42,6 +42,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     playlistStartDate: null as Date | null,
     playlistEndDate: null as Date | null,
     isActive: screen.status !== "offline",
+    heightCalibration: 0,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -57,6 +58,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         playlistStartDate: null,
         playlistEndDate: null,
         isActive: screen.status !== "offline",
+        heightCalibration: 0,
       });
       loadPlaylists();
       loadCurrentPlaylist();
@@ -73,6 +75,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           playlistId: player.playlistId || "none",
           playlistStartDate: player.playlistStartDate ? new Date(player.playlistStartDate) : null,
           playlistEndDate: player.playlistEndDate ? new Date(player.playlistEndDate) : null,
+          heightCalibration: player.heightCalibration ?? 0,
         }));
       }
     } catch (error) {
@@ -125,6 +128,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         deviceName: formData.name,
         location: formData.location,
         isActive: formData.isActive,
+        heightCalibration: formData.heightCalibration,
       };
       
       // Always include playlist fields - send null to clear, or values to set
@@ -216,6 +220,20 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="Enter location"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
+              <Input
+                id="heightCalibration"
+                type="number"
+                step="0.1"
+                value={formData.heightCalibration}
+                onChange={(e) => setFormData({ ...formData, heightCalibration: parseFloat(e.target.value) || 0 })}
+                placeholder="0.0"
+              />
+              <p className="text-xs text-muted-foreground">
+                Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="flowType">Flow Type</Label>

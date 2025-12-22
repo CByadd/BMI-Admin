@@ -23,9 +23,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    // Refresh data every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
+    // Only fetch on mount - no automatic refresh
   }, []);
 
   const fetchDashboardData = async () => {

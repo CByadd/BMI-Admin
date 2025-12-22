@@ -13,9 +13,7 @@ const UserActivityChart = () => {
 
   useEffect(() => {
     fetchActivityData();
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchActivityData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    // Only fetch on mount - no automatic refresh
   }, []);
 
   const fetchActivityData = async () => {

@@ -34,9 +34,7 @@ const Screens = () => {
 
   useEffect(() => {
     fetchScreens();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchScreens, 30000);
-    return () => clearInterval(interval);
+    // Only fetch on mount - refresh happens when user actions occur (edit, delete, connect)
   }, []);
 
   const fetchScreens = async () => {

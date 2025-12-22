@@ -17,9 +17,7 @@ const WeightClassificationChart = () => {
 
   useEffect(() => {
     fetchClassificationData();
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchClassificationData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    // Only fetch on mount - no automatic refresh
   }, []);
 
   const fetchClassificationData = async () => {

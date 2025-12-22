@@ -28,9 +28,7 @@ const ScreenStatusTable = () => {
 
   useEffect(() => {
     fetchScreens();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchScreens, 30000);
-    return () => clearInterval(interval);
+    // Only fetch on mount - no automatic refresh
   }, []);
 
   const fetchScreens = async () => {
