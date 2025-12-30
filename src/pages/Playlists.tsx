@@ -6,49 +6,33 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Search, Eye, Loader2 } from "lucide-react";
 import { PlaylistEmptyState } from "@/components/playlist/PlaylistEmptyState";
 import { PlaylistCard } from "@/components/playlist/PlaylistCard";
+import { PlaylistCardSkeleton } from "@/components/playlist/PlaylistCardSkeleton";
 import { CreatePlaylistDialog } from "@/components/playlist/CreatePlaylistDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/contexts/DataContext";
 import api from "@/lib/api";
 
 const Playlists = () => {
-  const [playlists, setPlaylists] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { playlists, isLoadingPlaylists, refreshPlaylists, removePlaylist, addPlaylist } = useData();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmptyState, setShowEmptyState] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchPlaylists();
-  }, []);
-
-  const fetchPlaylists = async () => {
-    try {
-      setLoading(true);
-      const response = await api.getAllPlaylists() as { ok: boolean; playlists: any[] };
-      if (response.ok && response.playlists) {
-        setPlaylists(response.playlists);
-      }
-    } catch (error) {
-      console.error('Error fetching playlists:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load playlists",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Refresh playlists on mount if needed (context handles caching)
+    refreshPlaylists();
+  }, [refreshPlaylists]);
 
   const handleDelete = async (id: string) => {
     try {
       await api.deletePlaylist(id);
+      // Remove from context
+      removePlaylist(id);
       toast({
         title: "Success",
         description: "Playlist deleted successfully",
       });
-      fetchPlaylists();
     } catch (error) {
       toast({
         title: "Error",
@@ -70,12 +54,15 @@ const Playlists = () => {
             tags: playlistData.playlist.tags,
             slots: playlistData.playlist.slots,
           };
-          await api.createPlaylist(duplicate);
-          toast({
-            title: "Success",
-            description: "Playlist duplicated successfully",
-          });
-          fetchPlaylists();
+          const response = await api.createPlaylist(duplicate) as { ok: boolean; playlist: any };
+          if (response.ok && response.playlist) {
+            // Add to context
+            addPlaylist(response.playlist);
+            toast({
+              title: "Success",
+              description: "Playlist duplicated successfully",
+            });
+          }
         }
       }
     } catch (error) {
@@ -87,8 +74,9 @@ const Playlists = () => {
     }
   };
 
-  const handleCreateSuccess = () => {
-    fetchPlaylists();
+  const handleCreateSuccess = async () => {
+    // Refresh playlists to get the new one
+    await refreshPlaylists();
   };
 
   const filteredPlaylists = playlists.filter(playlist =>
@@ -97,13 +85,24 @@ const Playlists = () => {
     playlist.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const hasPlaylists = !showEmptyState && !loading && playlists.length > 0;
+  const hasPlaylists = !showEmptyState && !isLoadingPlaylists && playlists.length > 0;
 
-  if (loading) {
+  if (isLoadingPlaylists && playlists.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          {/* Controls Skeleton */}
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+            <div className="h-10 w-full sm:max-w-md bg-muted animate-pulse rounded" />
+            <div className="h-10 w-full sm:w-auto bg-muted animate-pulse rounded" />
+          </div>
+          
+          {/* Playlist Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <PlaylistCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );

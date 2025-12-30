@@ -147,8 +147,39 @@ const Users = () => {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          {/* Header Skeleton */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+            </div>
+            <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+          </div>
+          
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-4 bg-card rounded-lg border border-border">
+                <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
+                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+          
+          {/* Table Skeleton */}
+          <div className="border rounded-lg p-4">
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="h-12 flex-1 bg-muted animate-pulse rounded" />
+                  <div className="h-12 flex-1 bg-muted animate-pulse rounded" />
+                  <div className="h-12 flex-1 bg-muted animate-pulse rounded" />
+                  <div className="h-12 w-24 bg-muted animate-pulse rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

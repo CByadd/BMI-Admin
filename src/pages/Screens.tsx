@@ -8,7 +8,9 @@ import { Plus, Search, Download, Filter, Eye, Loader2 } from "lucide-react";
 import ScreenEmptyState from "@/components/screens/ScreenEmptyState";
 import ConnectScreenModal from "@/components/screens/ConnectScreenModal";
 import ScreenCard from "@/components/screens/ScreenCard";
+import ScreenCardSkeleton from "@/components/screens/ScreenCardSkeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/contexts/DataContext";
 import api from "@/lib/api";
 
 interface Screen {
@@ -24,8 +26,7 @@ interface Screen {
 }
 
 const Screens = () => {
-  const [screens, setScreens] = useState<Screen[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { screens, isLoadingScreens, refreshScreens, updateScreen, removeScreen, addScreen } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -33,84 +34,15 @@ const Screens = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchScreens();
-    // Only fetch on mount - refresh happens when user actions occur (edit, delete, connect)
-  }, []);
-
-  const fetchScreens = async () => {
-    try {
-      setLoading(true);
-      const response = await api.getAllPlayers() as { ok: boolean; players: any[] };
-      
-      if (response.ok && response.players) {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        
-        const screensData: Screen[] = response.players.map((player) => {
-          const lastSeen = new Date(player.lastSeen);
-          const isOnline = player.isActive && lastSeen >= fiveMinutesAgo;
-          const isOffline = !player.isActive || lastSeen < oneDayAgo;
-          
-          let status: "online" | "offline" | "maintenance" = "offline";
-          if (isOnline) {
-            status = "online";
-          } else if (isOffline) {
-            status = "offline";
-          } else {
-            status = "maintenance";
-          }
-
-          // Calculate time ago
-          const timeDiff = Date.now() - lastSeen.getTime();
-          const minutesAgo = Math.floor(timeDiff / (1000 * 60));
-          const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
-          const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-          
-          let lastSync = "";
-          if (minutesAgo < 60) {
-            lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
-          } else if (hoursAgo < 24) {
-            lastSync = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
-          } else {
-            lastSync = `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
-          }
-
-          const flowType = player.flowType;
-          const flowTypeLabel = flowType || "Normal";
-          const model = `Flow ${flowTypeLabel} - ${player.screenWidth || 'Unknown'}x${player.screenHeight || 'Unknown'} Display`;
-
-          return {
-            id: player.screenId,
-            name: player.deviceName || player.screenId,
-            model,
-            status,
-            location: player.location || "Unknown Location",
-            lastSync,
-            todayUsers: 0, // TODO: Add API endpoint for today's BMI count per screen
-            totalUsers: 0, // TODO: Add API endpoint for total BMI count per screen
-            flowType: flowType,
-          };
-        });
-        
-        setScreens(screensData);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching screens:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load screens",
-        variant: "destructive",
-      });
-      setLoading(false);
-    }
-  };
+    // Refresh screens on mount if needed (context handles caching)
+    refreshScreens();
+  }, [refreshScreens]);
 
   const handleConnectScreen = async (newScreen: any) => {
     try {
       // The actual registration happens in ConnectScreenModal
-      // Just refresh the list
-      await fetchScreens();
+      // Refresh the list to get the new screen
+      await refreshScreens();
       toast({
         title: "Success",
         description: "Screen connected successfully",
@@ -126,8 +58,10 @@ const Screens = () => {
 
   const handleEditScreen = async (updatedScreen: Screen) => {
     try {
-      // Refresh screens to show updated data
-      await fetchScreens();
+      // Update the screen in context
+      updateScreen(updatedScreen.id, updatedScreen);
+      // Refresh to get latest data from server
+      await refreshScreens();
     } catch (error) {
       console.error('Error refreshing screens:', error);
     }
@@ -136,11 +70,12 @@ const Screens = () => {
   const handleDeleteScreen = async (screenId: string) => {
     try {
       await api.deletePlayer(screenId);
+      // Remove from context
+      removeScreen(screenId);
       toast({
         title: "Success",
         description: "Screen deleted successfully",
       });
-      await fetchScreens();
     } catch (error) {
       toast({
         title: "Error",
@@ -157,13 +92,28 @@ const Screens = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const hasScreens = !showEmptyState && !loading && screens.length > 0;
+  const hasScreens = !showEmptyState && !isLoadingScreens && screens.length > 0;
 
-  if (loading) {
+  if (isLoadingScreens && screens.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          {/* Stats Summary Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-4 bg-card rounded-lg border border-border">
+                <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
+                <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+          
+          {/* Screen Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ScreenCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -184,7 +134,7 @@ const Screens = () => {
         />
       </div> */}
 
-      {!hasScreens ? (
+      {!hasScreens && !isLoadingScreens ? (
           <ScreenEmptyState onConnect={() => setIsModalOpen(true)} />
         ) : (
           <div className="space-y-6">
@@ -240,40 +190,61 @@ const Screens = () => {
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-card rounded-lg border border-border">
-                <p className="text-sm text-muted-foreground">Total Screens</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{screens.length}</p>
-              </div>
-              <div className="p-4 bg-card rounded-lg border border-border">
-                <p className="text-sm text-muted-foreground">Online</p>
-                <p className="text-3xl font-bold text-success mt-1">
-                  {screens.filter(s => s.status === "online").length}
-                </p>
-              </div>
-              <div className="p-4 bg-card rounded-lg border border-border">
-                <p className="text-sm text-muted-foreground">Offline</p>
-                <p className="text-3xl font-bold text-danger mt-1">
-                  {screens.filter(s => s.status === "offline").length}
-                </p>
-              </div>
-              <div className="p-4 bg-card rounded-lg border border-border">
-                <p className="text-sm text-muted-foreground">Maintenance</p>
-                <p className="text-3xl font-bold text-warning mt-1">
-                  {screens.filter(s => s.status === "maintenance").length}
-                </p>
-              </div>
+              {isLoadingScreens && screens.length === 0 ? (
+                // Show skeleton stats while loading
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="p-4 bg-card rounded-lg border border-border">
+                    <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
+                    <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                  </div>
+                ))
+              ) : (
+                // Show actual stats
+                <>
+                  <div className="p-4 bg-card rounded-lg border border-border">
+                    <p className="text-sm text-muted-foreground">Total Screens</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{screens.length}</p>
+                  </div>
+                  <div className="p-4 bg-card rounded-lg border border-border">
+                    <p className="text-sm text-muted-foreground">Online</p>
+                    <p className="text-3xl font-bold text-success mt-1">
+                      {screens.filter(s => s.status === "online").length}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-card rounded-lg border border-border">
+                    <p className="text-sm text-muted-foreground">Offline</p>
+                    <p className="text-3xl font-bold text-danger mt-1">
+                      {screens.filter(s => s.status === "offline").length}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-card rounded-lg border border-border">
+                    <p className="text-sm text-muted-foreground">Maintenance</p>
+                    <p className="text-3xl font-bold text-warning mt-1">
+                      {screens.filter(s => s.status === "maintenance").length}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Screen Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredScreens.map((screen) => (
-                <ScreenCard 
-                  key={screen.id} 
-                  screen={screen}
-                  onEdit={handleEditScreen}
-                  onDelete={handleDeleteScreen}
-                />
-              ))}
+              {isLoadingScreens && screens.length === 0 ? (
+                // Show skeletons while loading
+                Array.from({ length: 6 }).map((_, i) => (
+                  <ScreenCardSkeleton key={i} />
+                ))
+              ) : (
+                // Show actual screens
+                filteredScreens.map((screen) => (
+                  <ScreenCard 
+                    key={screen.id} 
+                    screen={screen}
+                    onEdit={handleEditScreen}
+                    onDelete={handleDeleteScreen}
+                  />
+                ))
+              )}
             </div>
 
             {filteredScreens.length === 0 && (

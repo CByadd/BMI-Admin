@@ -244,8 +244,19 @@ const AdminManagement = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="border rounded-lg p-4">
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-4 items-center">
+                <div className="h-12 flex-1 bg-muted animate-pulse rounded" />
+                <div className="h-12 flex-1 bg-muted animate-pulse rounded" />
+                <div className="h-12 flex-1 bg-muted animate-pulse rounded" />
+                <div className="h-12 w-24 bg-muted animate-pulse rounded" />
+                <div className="h-12 w-32 bg-muted animate-pulse rounded" />
+                <div className="h-12 w-20 bg-muted animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="border rounded-lg">

@@ -18,6 +18,7 @@ import {
 import EditScreenModal from "./EditScreenModal";
 import AssignPlaylistModal from "./AssignPlaylistModal";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/contexts/DataContext";
 
 interface ScreenCardProps {
   screen: {
@@ -56,10 +57,16 @@ const statusConfig = {
 const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshScreens } = useData();
   const config = statusConfig[screen.status];
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAssignPlaylistOpen, setIsAssignPlaylistOpen] = useState(false);
+
+  const handlePlaylistAssigned = async () => {
+    // Refresh screens to show updated playlist assignment
+    await refreshScreens();
+  };
 
   const handleEdit = (updatedScreen: any) => {
     onEdit?.(updatedScreen);
@@ -205,6 +212,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
         open={isAssignPlaylistOpen}
         onOpenChange={setIsAssignPlaylistOpen}
         screenId={screen.id}
+        onAssign={handlePlaylistAssigned}
       />
     </Card>
   );

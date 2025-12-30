@@ -8,9 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useData } from "@/contexts/DataContext";
 import api from "@/lib/api";
 
 interface EditScreenModalProps {
@@ -35,6 +37,7 @@ interface Playlist {
 
 const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModalProps) => {
   const { toast } = useToast();
+  const { updateScreen, refreshScreens } = useData();
   const [formData, setFormData] = useState({
     name: screen.name,
     location: screen.location || "",
@@ -43,44 +46,65 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     playlistEndDate: null as Date | null,
     isActive: screen.status !== "offline",
     heightCalibration: null as number | null,
+    paymentAmount: null as number | null,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load playlists and current assignment when modal opens
   useEffect(() => {
     if (open) {
-      setFormData({
-        name: screen.name,
-        location: screen.location || "",
-        playlistId: "",
-        playlistStartDate: null,
-        playlistEndDate: null,
-        isActive: screen.status !== "offline",
-        heightCalibration: null,
-      });
       loadPlaylists();
       loadCurrentPlaylist();
     }
   }, [screen, open]);
 
   const loadCurrentPlaylist = async () => {
+    setIsLoadingData(true);
     try {
       const response = await api.getPlayer(screen.id);
       if (response.ok && response.player) {
         const player = response.player;
-        setFormData(prev => ({
-          ...prev,
+        setFormData({
+          name: player.deviceName || screen.name,
+          location: player.location || screen.location || "",
           playlistId: player.playlistId || "none",
           playlistStartDate: player.playlistStartDate ? new Date(player.playlistStartDate) : null,
           playlistEndDate: player.playlistEndDate ? new Date(player.playlistEndDate) : null,
-          heightCalibration: player.heightCalibration && player.heightCalibration !== 0 ? player.heightCalibration : null,
-        }));
+          isActive: player.isActive !== undefined ? player.isActive : (screen.status !== "offline"),
+          heightCalibration: player.heightCalibration !== null && player.heightCalibration !== undefined && player.heightCalibration !== 0 ? player.heightCalibration : null,
+          paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
+        });
+      } else {
+        // If API call fails, initialize with screen data
+        setFormData({
+          name: screen.name,
+          location: screen.location || "",
+          playlistId: "none",
+          playlistStartDate: null,
+          playlistEndDate: null,
+          isActive: screen.status !== "offline",
+          heightCalibration: null,
+          paymentAmount: null,
+        });
       }
     } catch (error) {
       console.error("Error loading current playlist:", error);
-      // Don't show error toast, just use default
+      // Initialize with screen data on error
+      setFormData({
+        name: screen.name,
+        location: screen.location || "",
+        playlistId: "none",
+        playlistStartDate: null,
+        playlistEndDate: null,
+        isActive: screen.status !== "offline",
+        heightCalibration: null,
+        paymentAmount: null,
+      });
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -129,6 +153,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         location: formData.location,
         isActive: formData.isActive,
         heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
+        paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
       };
       
       // Always include playlist fields - send null to clear, or values to set
@@ -173,13 +198,20 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         });
       }
 
-      // Call onSave with updated data
-      onSave({
+      // Update screen in context
+      const updatedScreenData = {
         ...screen,
         name: formData.name,
         location: formData.location,
         status: formData.isActive ? (screen.status === "offline" ? "online" : screen.status) : "offline",
-      });
+      };
+      updateScreen(screen.id, updatedScreenData);
+      
+      // Refresh to get latest data from server
+      await refreshScreens();
+      
+      // Call onSave with updated data
+      onSave(updatedScreenData);
 
       onOpenChange(false);
     } catch (error: any) {
@@ -200,6 +232,75 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         <DialogHeader>
           <DialogTitle>Edit Screen - {screen.id}</DialogTitle>
         </DialogHeader>
+        {isLoadingData ? (
+          <div className="space-y-4 py-4">
+            {/* First row: Screen Name and Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+
+            {/* Second row: Height Calibration and Payment Amount */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            </div>
+            
+            {/* Third row: Flow Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+            
+            {/* Playlist Selection */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+
+            {/* Date Range Skeleton */}
+            <div className="space-y-4 pt-2 border-t border-border">
+              <Skeleton className="h-4 w-48" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* Enable Screen Toggle */}
+            <div className="flex items-center justify-between space-x-2 py-2">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+              <Skeleton className="h-6 w-11 rounded-full" />
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {/* First row: Screen Name and Location */}
@@ -225,7 +326,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
               </div>
             </div>
 
-            {/* Second row: Height Calibration and Flow Type */}
+            {/* Second row: Height Calibration and Payment Amount */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
@@ -248,6 +349,31 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 </p>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
+                <Input
+                  id="paymentAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.paymentAmount ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                    });
+                  }}
+                  placeholder="Leave empty for default (₹9)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
+                </p>
+              </div>
+            </div>
+            
+            {/* Third row: Flow Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="flowType">Flow Type</Label>
                 <Input
                   id="flowType"
@@ -262,26 +388,34 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
             </div>
             <div className="space-y-2">
               <Label htmlFor="playlist">Assign Playlist</Label>
-              <Select 
-                value={formData.playlistId || "none"} 
-                onValueChange={(value) => setFormData({ ...formData, playlistId: value === "none" ? "" : value })}
-                disabled={isLoadingPlaylists}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingPlaylists ? "Loading playlists..." : "Select a playlist"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (No playlist assigned)</SelectItem>
-                  {playlists.map((playlist) => (
-                    <SelectItem key={playlist.id} value={playlist.id}>
-                      {playlist.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Select a playlist to assign to this screen
-              </p>
+              {isLoadingPlaylists ? (
+                <>
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </>
+              ) : (
+                <>
+                  <Select 
+                    value={formData.playlistId || "none"} 
+                    onValueChange={(value) => setFormData({ ...formData, playlistId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a playlist" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (No playlist assigned)</SelectItem>
+                      {playlists.map((playlist) => (
+                        <SelectItem key={playlist.id} value={playlist.id}>
+                          {playlist.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Select a playlist to assign to this screen
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Date Range Configuration for Playlist */}
@@ -421,6 +555,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
