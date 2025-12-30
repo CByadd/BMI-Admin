@@ -26,6 +26,7 @@ export const API_ENDPOINTS = {
     UPDATE_CONFIG: (screenId: string) => `/api/adscape/player/${screenId}/config`,
     UPLOAD_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
     GET_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
+    DELETE_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
     DELETE: (screenId: string) => `/api/adscape/player/${screenId}`,
   },
 
@@ -260,6 +261,10 @@ export const api = {
     return await response.json();
   },
   getLogo: (screenId: string) => fetchAPI(API_ENDPOINTS.SCREENS.GET_LOGO(screenId)),
+  deleteLogo: (screenId: string) =>
+    fetchAPI(API_ENDPOINTS.SCREENS.DELETE_LOGO(screenId), {
+      method: 'DELETE',
+    }),
   deletePlayer: (screenId: string) =>
     fetchAPI(API_ENDPOINTS.SCREENS.DELETE(screenId), {
       method: 'DELETE',

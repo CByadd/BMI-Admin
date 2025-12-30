@@ -56,6 +56,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isDeletingLogo, setIsDeletingLogo] = useState(false);
 
   // Load playlists and current assignment when modal opens
   useEffect(() => {
@@ -221,6 +222,43 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
   const handleRemoveLogo = () => {
     setLogoFile(null);
     setLogoPreview(logoUrl);
+  };
+
+  const handleDeleteLogo = async () => {
+    if (!logoUrl) {
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm('Are you sure you want to delete this logo? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeletingLogo(true);
+    try {
+      const response = await api.deleteLogo(screen.id);
+      if (response.ok) {
+        setLogoUrl(null);
+        setLogoPreview(null);
+        setLogoFile(null);
+        toast({
+          title: "Success",
+          description: "Logo deleted successfully",
+        });
+        await refreshScreens();
+      } else {
+        throw new Error(response.error || 'Delete failed');
+      }
+    } catch (error: any) {
+      console.error("Error deleting logo:", error);
+      toast({
+        title: "Delete failed",
+        description: error?.message || "Failed to delete logo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingLogo(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -474,7 +512,30 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
 
             {/* Logo Upload Section */}
             <div className="space-y-2 pt-2 border-t border-border">
-              <Label>Screen Logo</Label>
+              <div className="flex items-center justify-between">
+                <Label>Screen Logo</Label>
+                {logoUrl && !logoFile && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteLogo}
+                    disabled={isDeletingLogo}
+                  >
+                    {isDeletingLogo ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <X className="w-4 h-4 mr-2" />
+                        Delete Logo
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-col gap-4">
                 {logoPreview && (
                   <div className="relative inline-block">
