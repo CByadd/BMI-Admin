@@ -42,16 +42,24 @@ const ScreenStatusTable = () => {
         const screensData: Screen[] = await Promise.all(
           response.players.slice(0, 4).map(async (player) => {
             const lastSeen = new Date(player.lastSeen);
-            const isOnline = player.isActive && lastSeen >= fiveMinutesAgo;
-            const isOffline = !player.isActive || lastSeen < new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
             
+            // Status logic:
+            // - Online: isActive && lastSeen within 5 minutes
+            // - Offline: isActive && lastSeen >= 48 hours ago (system is active but hasn't been seen for 48 hours)
+            // - Maintenance: !isActive (disabled) OR (isActive && lastSeen > 48 hours ago)
             let status: "online" | "offline" | "maintenance" = "offline";
-            if (isOnline) {
+            if (player.isActive && lastSeen >= fiveMinutesAgo) {
               status = "online";
-            } else if (isOffline) {
-              status = "offline";
-            } else {
+            } else if (!player.isActive) {
+              // System is disabled - show as maintenance
               status = "maintenance";
+            } else if (lastSeen >= fortyEightHoursAgo) {
+              // System is active but offline for 48+ hours - show as maintenance
+              status = "maintenance";
+            } else {
+              // System is active but offline (between 5 minutes and 48 hours) - show as offline
+              status = "offline";
             }
 
             // Calculate time ago

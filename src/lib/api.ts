@@ -24,6 +24,8 @@ export const API_ENDPOINTS = {
     GET_BY_ID: (screenId: string) => `/api/adscape/player/${screenId}`,
     UPDATE_FLOW_TYPE: (screenId: string) => `/api/adscape/player/${screenId}/flow-type`,
     UPDATE_CONFIG: (screenId: string) => `/api/adscape/player/${screenId}/config`,
+    UPLOAD_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
+    GET_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
     DELETE: (screenId: string) => `/api/adscape/player/${screenId}`,
   },
 
@@ -210,11 +212,54 @@ export const api = {
     playlistStartDate?: string | null;
     playlistEndDate?: string | null;
     heightCalibration?: number;
+    paymentAmount?: number | null;
+    logoUrl?: string | null;
   }) =>
     fetchAPI(API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), {
       method: 'PUT',
       body: JSON.stringify(config),
     }),
+  uploadLogo: async (screenId: string, file: File) => {
+    const url = `${API_BASE_URL}${API_ENDPOINTS.SCREENS.UPLOAD_LOGO(screenId)}`;
+    const token = getAuthToken();
+    
+    if (!token) {
+      const error = new Error('Access token required');
+      (error as any).status = 401;
+      (error as any).isAuthError = true;
+      handleUnauthorized();
+      throw error;
+    }
+    
+    const formData = new FormData();
+    formData.append('logo', file);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      
+      if (response.status === 401) {
+        const authError = new Error(errorMessage);
+        (authError as any).status = 401;
+        (authError as any).isAuthError = true;
+        handleUnauthorized();
+        throw authError;
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    return await response.json();
+  },
+  getLogo: (screenId: string) => fetchAPI(API_ENDPOINTS.SCREENS.GET_LOGO(screenId)),
   deletePlayer: (screenId: string) =>
     fetchAPI(API_ENDPOINTS.SCREENS.DELETE(screenId), {
       method: 'DELETE',
@@ -224,11 +269,13 @@ export const api = {
   getBMIStats: () => fetchAPI(API_ENDPOINTS.ANALYTICS.BMI_STATS),
   getUserActivity: () => fetchAPI(API_ENDPOINTS.ANALYTICS.USER_ACTIVITY),
   getWeightClassification: () => fetchAPI(API_ENDPOINTS.ANALYTICS.WEIGHT_CLASSIFICATION),
-  getScreenBMIRecords: (screenId: string, dateFilter?: string, startDate?: string, endDate?: string) => {
+  getScreenBMIRecords: (screenId: string, dateFilter?: string, startDate?: string, endDate?: string, page?: number, limit?: number) => {
     const params = new URLSearchParams();
     if (dateFilter) params.append('dateFilter', dateFilter);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (page !== undefined) params.append('page', page.toString());
+    if (limit !== undefined) params.append('limit', limit.toString());
     const queryString = params.toString();
     return fetchAPI(`/api/admin/screen/${screenId}/bmi-records${queryString ? `?${queryString}` : ''}`);
   },

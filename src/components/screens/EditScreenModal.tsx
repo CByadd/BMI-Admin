@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Upload, X, Image as ImageIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -52,12 +52,19 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Load playlists and current assignment when modal opens
   useEffect(() => {
     if (open) {
       loadPlaylists();
       loadCurrentPlaylist();
+    } else {
+      // Reset form when modal closes
+      setLogoFile(null);
     }
   }, [screen, open]);
 
@@ -74,9 +81,17 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           playlistStartDate: player.playlistStartDate ? new Date(player.playlistStartDate) : null,
           playlistEndDate: player.playlistEndDate ? new Date(player.playlistEndDate) : null,
           isActive: player.isActive !== undefined ? player.isActive : (screen.status !== "offline"),
-          heightCalibration: player.heightCalibration !== null && player.heightCalibration !== undefined && player.heightCalibration !== 0 ? player.heightCalibration : null,
+          heightCalibration: player.heightCalibration !== null && player.heightCalibration !== undefined ? player.heightCalibration : null,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
         });
+        // Load logo URL if exists
+        if (player.logoUrl) {
+          setLogoUrl(player.logoUrl);
+          setLogoPreview(player.logoUrl);
+        } else {
+          setLogoUrl(null);
+          setLogoPreview(null);
+        }
       } else {
         // If API call fails, initialize with screen data
         setFormData({
@@ -89,6 +104,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           heightCalibration: null,
           paymentAmount: null,
         });
+        setLogoUrl(null);
+        setLogoPreview(null);
+        setLogoFile(null);
       }
     } catch (error) {
       console.error("Error loading current playlist:", error);
@@ -103,6 +121,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         heightCalibration: null,
         paymentAmount: null,
       });
+      setLogoUrl(null);
+      setLogoPreview(null);
+      setLogoFile(null);
     } finally {
       setIsLoadingData(false);
     }
@@ -127,6 +148,81 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     }
   };
 
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Logo file must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setLogoFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a logo file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const response = await api.uploadLogo(screen.id, logoFile);
+      if (response.ok) {
+        setLogoUrl(response.logoUrl);
+        setLogoPreview(response.logoUrl);
+        setLogoFile(null);
+        toast({
+          title: "Success",
+          description: "Logo uploaded successfully",
+        });
+        await refreshScreens();
+      } else {
+        throw new Error(response.error || 'Upload failed');
+      }
+    } catch (error: any) {
+      console.error("Error uploading logo:", error);
+      toast({
+        title: "Upload failed",
+        description: error?.message || "Failed to upload logo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(logoUrl);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -141,6 +237,11 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         });
         setIsSaving(false);
         return;
+      }
+
+      // Upload logo first if a new file is selected
+      if (logoFile) {
+        await handleLogoUpload();
       }
 
       // Update screen configuration via API (without flowType - it's static)
@@ -228,12 +329,12 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[90vw] max-w-[95vw] w-full">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[90vw] max-w-[95vw] w-full h-[90dvh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Edit Screen - {screen.id}</DialogTitle>
         </DialogHeader>
         {isLoadingData ? (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto flex-1">
             {/* First row: Screen Name and Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -301,8 +402,8 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
             </div>
           </div>
         ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto flex-1">
             {/* First row: Screen Name and Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -367,6 +468,65 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 />
                 <p className="text-xs text-muted-foreground">
                   Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
+                </p>
+              </div>
+            </div>
+
+            {/* Logo Upload Section */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label>Screen Logo</Label>
+              <div className="flex flex-col gap-4">
+                {logoPreview && (
+                  <div className="relative inline-block">
+                    <img 
+                      src={logoPreview} 
+                      alt="Logo preview" 
+                      className="h-32 w-auto object-contain border border-border rounded-lg p-2 bg-muted"
+                    />
+                    {logoFile && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                        onClick={handleRemoveLogo}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoFileChange}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  {logoFile && (
+                    <Button
+                      type="button"
+                      onClick={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                    >
+                      {isUploadingLogo ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload Logo
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload a logo image for this screen. The logo will be displayed at the top of modals in the Android app. Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.
                 </p>
               </div>
             </div>
@@ -541,7 +701,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button 
               type="button" 
               variant="outline" 

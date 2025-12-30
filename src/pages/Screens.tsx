@@ -23,6 +23,8 @@ interface Screen {
   todayUsers: number;
   totalUsers: number;
   flowType: string | null;
+  paymentAmount: number | null;
+  playlistId: string | null;
 }
 
 const Screens = () => {

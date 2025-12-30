@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Monitor, MapPin, Clock, Eye, Edit, Trash2, Settings, ListVideo } from "lucide-react";
+import { Monitor, MapPin, Clock, Eye, Edit, Trash2, Settings, ListVideo, CircleDollarSign, Music } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -31,6 +31,8 @@ interface ScreenCardProps {
     todayUsers?: number;
     totalUsers?: number;
     flowType?: string | null;
+    paymentAmount?: number | null;
+    playlistId?: string | null;
   };
   onEdit?: (updatedScreen: any) => void;
   onDelete?: (screenId: string) => void;
@@ -57,11 +59,13 @@ const statusConfig = {
 const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshScreens } = useData();
+  const { refreshScreens, getPlaylist } = useData();
   const config = statusConfig[screen.status];
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAssignPlaylistOpen, setIsAssignPlaylistOpen] = useState(false);
+  
+  const assignedPlaylist = screen.playlistId ? getPlaylist(screen.playlistId) : null;
 
   const handlePlaylistAssigned = async () => {
     // Refresh screens to show updated playlist assignment
@@ -132,6 +136,39 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
           </Label>
           <div className="text-sm font-medium text-foreground">
             {screen.flowType || "Normal"}
+          </div>
+        </div>
+
+        {/* Configuration Details */}
+        <div className="space-y-3 pt-2 border-t border-border">
+          {/* Payment Amount */}
+          {screen.paymentAmount !== null && screen.paymentAmount !== undefined && (
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <CircleDollarSign className="w-3 h-3" />
+                Configured Amount
+              </Label>
+              <div className="text-sm font-medium text-foreground">
+                ₹{screen.paymentAmount.toFixed(2)}
+              </div>
+            </div>
+          )}
+          
+          {/* Assigned Playlist */}
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Music className="w-3 h-3" />
+              Assigned Playlist
+            </Label>
+            <div className="text-sm font-medium text-foreground">
+              {assignedPlaylist ? (
+                <Badge variant="secondary" className="text-xs">
+                  {assignedPlaylist.name}
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground">None</span>
+              )}
+            </div>
           </div>
         </div>
 

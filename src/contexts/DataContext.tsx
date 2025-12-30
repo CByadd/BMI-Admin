@@ -22,6 +22,8 @@ interface Screen {
   todayUsers: number;
   totalUsers: number;
   flowType: string | null;
+  paymentAmount: number | null;
+  playlistId: string | null;
 }
 
 interface Playlist {
@@ -105,19 +107,26 @@ const saveLastSync = () => {
 // Helper function to transform player data to Screen format
 const transformPlayerToScreen = (player: any): Screen => {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
   
   const lastSeen = new Date(player.lastSeen);
-  const isOnline = player.isActive && lastSeen >= fiveMinutesAgo;
-  const isOffline = !player.isActive || lastSeen < oneDayAgo;
   
+  // Status logic:
+  // - Online: isActive && lastSeen within 5 minutes
+  // - Offline: isActive && lastSeen >= 48 hours ago (system is active but hasn't been seen for 48 hours)
+  // - Maintenance: !isActive (disabled) OR (isActive && lastSeen > 48 hours ago)
   let status: "online" | "offline" | "maintenance" = "offline";
-  if (isOnline) {
+  if (player.isActive && lastSeen >= fiveMinutesAgo) {
     status = "online";
-  } else if (isOffline) {
-    status = "offline";
-  } else {
+  } else if (!player.isActive) {
+    // System is disabled - show as maintenance
     status = "maintenance";
+  } else if (lastSeen >= fortyEightHoursAgo) {
+    // System is active but offline for 48+ hours - show as maintenance
+    status = "maintenance";
+  } else {
+    // System is active but offline (between 5 minutes and 48 hours) - show as offline
+    status = "offline";
   }
 
   // Calculate time ago
@@ -149,6 +158,8 @@ const transformPlayerToScreen = (player: any): Screen => {
     todayUsers: 0, // TODO: Add API endpoint for today's BMI count per screen
     totalUsers: 0, // TODO: Add API endpoint for total BMI count per screen
     flowType: flowType,
+    paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
+    playlistId: player.playlistId || null,
   };
 };
 
@@ -419,4 +430,6 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+
 

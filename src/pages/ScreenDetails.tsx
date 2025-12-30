@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import PeakHoursChart from "@/components/screens/PeakHoursChart";
 
 interface UserLog {
   id: string;
@@ -60,6 +61,8 @@ const ScreenDetails = () => {
   const [loading, setLoading] = useState(true);
   const [screenData, setScreenData] = useState<ScreenData | null>(null);
   const [userLogs, setUserLogs] = useState<UserLog[]>([]);
+  const [peakHoursData, setPeakHoursData] = useState<UserLog[]>([]);
+  const [loadingPeakHours, setLoadingPeakHours] = useState(false);
   const [stats, setStats] = useState({
     todayUsers: 0,
     totalUsers: 0,
@@ -82,7 +85,15 @@ const ScreenDetails = () => {
   useEffect(() => {
     if (id) {
       fetchBMIRecords();
+      // Also fetch initial data for peak hours (last 7 days by default)
+      const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+      fetchAllRecordsForPeakHours(startDate, endDate);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, dateFilter, pagination.page, pagination.limit]);
 
   useEffect(() => {
@@ -104,18 +115,24 @@ const ScreenDetails = () => {
         const player = response.player;
         const lastSeen = new Date(player.lastSeen);
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
         
-        const isOnline = player.isActive && lastSeen >= fiveMinutesAgo;
-        const isOffline = !player.isActive || lastSeen < oneDayAgo;
-        
+        // Status logic:
+        // - Online: isActive && lastSeen within 5 minutes
+        // - Offline: isActive && lastSeen >= 48 hours ago (system is active but hasn't been seen for 48 hours)
+        // - Maintenance: !isActive (disabled) OR (isActive && lastSeen > 48 hours ago)
         let status: "online" | "offline" | "maintenance" = "offline";
-        if (isOnline) {
+        if (player.isActive && lastSeen >= fiveMinutesAgo) {
           status = "online";
-        } else if (isOffline) {
-          status = "offline";
-        } else {
+        } else if (!player.isActive) {
+          // System is disabled - show as maintenance
           status = "maintenance";
+        } else if (lastSeen >= fortyEightHoursAgo) {
+          // System is active but offline for 48+ hours - show as maintenance
+          status = "maintenance";
+        } else {
+          // System is active but offline (between 5 minutes and 48 hours) - show as offline
+          status = "offline";
         }
 
         // Calculate time ago
@@ -253,6 +270,55 @@ const ScreenDetails = () => {
       }));
     }
   };
+  
+  // Fetch all records for peak hours analysis
+  const fetchAllRecordsForPeakHours = useCallback(async (startDate?: Date, endDate?: Date) => {
+    if (!id) return;
+    
+    try {
+      setLoadingPeakHours(true);
+      const startDateStr = startDate ? startDate.toISOString().split('T')[0] : undefined;
+      const endDateStr = endDate ? endDate.toISOString().split('T')[0] : undefined;
+      
+      // Fetch with a very high limit to get all records (or we could fetch multiple pages)
+      const response = await api.getScreenBMIRecords(
+        id,
+        undefined, // dateFilter not used
+        startDateStr,
+        endDateStr,
+        1, // page
+        10000 // high limit to get all records
+      ) as {
+        ok: boolean;
+        records: UserLog[];
+      };
+      
+      if (response.ok) {
+        const formattedLogs = response.records.map((record) => ({
+          id: record.id,
+          date: record.date,
+          userName: record.userName,
+          mobile: record.mobile,
+          weight: record.weight,
+          height: record.height,
+          bmi: record.bmi,
+          category: record.category,
+          location: record.location,
+          waterIntake: record.waterIntake,
+        }));
+        setPeakHoursData(formattedLogs);
+      }
+    } catch (error) {
+      console.error('Error fetching peak hours data:', error);
+      // Don't show toast, just log error - peak hours is supplementary
+    } finally {
+      setLoadingPeakHours(false);
+    }
+  }, [id]);
+
+  const handlePeakHoursDateRangeChange = useCallback((startDate: Date | undefined, endDate: Date | undefined) => {
+    fetchAllRecordsForPeakHours(startDate, endDate);
+  }, [fetchAllRecordsForPeakHours]);
   
   // Handle scroll for infinite loading
   const handleScroll = useCallback(() => {
@@ -465,7 +531,13 @@ const ScreenDetails = () => {
             </div>
           </div>
         </Card>
-      
+
+        {/* Peak Hours Chart */}
+        <PeakHoursChart 
+          userLogs={peakHoursData.length > 0 ? peakHoursData : userLogs}
+          loading={loadingPeakHours}
+          onDateRangeChange={handlePeakHoursDateRangeChange}
+        />
 
       {/* User Logs Section */}
       <Card className="p-4 sm:p-6">
