@@ -46,6 +46,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     playlistEndDate: null as Date | null,
     isActive: screen.status !== "offline",
     heightCalibration: null as number | null,
+    heightCalibrationEnabled: true,
     paymentAmount: null as number | null,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -83,6 +84,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           playlistEndDate: player.playlistEndDate ? new Date(player.playlistEndDate) : null,
           isActive: player.isActive !== undefined ? player.isActive : (screen.status !== "offline"),
           heightCalibration: player.heightCalibration !== null && player.heightCalibration !== undefined ? player.heightCalibration : null,
+          heightCalibrationEnabled: player.heightCalibrationEnabled !== undefined ? player.heightCalibrationEnabled : true,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
         });
         // Load logo URL if exists
@@ -103,6 +105,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           playlistEndDate: null,
           isActive: screen.status !== "offline",
           heightCalibration: null,
+          heightCalibrationEnabled: true,
           paymentAmount: null,
         });
         setLogoUrl(null);
@@ -292,6 +295,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         location: formData.location,
         isActive: formData.isActive,
         heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
+        heightCalibrationEnabled: formData.heightCalibrationEnabled,
         paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
       };
       
@@ -486,6 +490,19 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 <p className="text-xs text-muted-foreground">
                   Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
                 </p>
+                <div className="flex items-center justify-between space-x-2 pt-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="heightCalibrationEnabled" className="text-sm">Height Calibration Enabled</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Enable height calibration validation
+                    </p>
+                  </div>
+                  <Switch
+                    id="heightCalibrationEnabled"
+                    checked={formData.heightCalibrationEnabled}
+                    onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>

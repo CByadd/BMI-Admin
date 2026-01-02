@@ -15,7 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import EditScreenModal from "./EditScreenModal";
 import AssignPlaylistModal from "./AssignPlaylistModal";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
@@ -61,7 +60,6 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
   const { toast } = useToast();
   const { refreshScreens, getPlaylist } = useData();
   const config = statusConfig[screen.status];
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAssignPlaylistOpen, setIsAssignPlaylistOpen] = useState(false);
   
@@ -207,7 +205,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
           <Button 
             variant="outline"
             size="icon"
-            onClick={() => setIsEditOpen(true)}
+            onClick={() => navigate(`/screens/${screen.id}/edit`)}
           >
             <Edit className="w-4 h-4" />
           </Button>
@@ -221,12 +219,6 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
         </div>
       </div>
 
-      <EditScreenModal
-        open={isEditOpen}
-        onOpenChange={setIsEditOpen}
-        screen={screen}
-        onSave={handleEdit}
-      />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>

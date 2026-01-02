@@ -135,6 +135,7 @@ export const api = {
     playlistStartDate?: string | null;
     playlistEndDate?: string | null;
     heightCalibration?: number;
+    heightCalibrationEnabled?: boolean;
     paymentAmount?: number | null;
     logoUrl?: string | null;
   }) =>
