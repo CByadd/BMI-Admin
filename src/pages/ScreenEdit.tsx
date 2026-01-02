@@ -41,6 +41,7 @@ const ScreenEdit = () => {
     heightCalibration: null as number | null,
     heightCalibrationEnabled: true,
     paymentAmount: null as number | null,
+    flowDrawerEnabled: true,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -78,6 +79,7 @@ const ScreenEdit = () => {
           heightCalibration: player.heightCalibration !== null && player.heightCalibration !== undefined ? player.heightCalibration : null,
           heightCalibrationEnabled: player.heightCalibrationEnabled !== undefined ? player.heightCalibrationEnabled : true,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
+          flowDrawerEnabled: player.flowDrawerEnabled !== undefined ? player.flowDrawerEnabled : true,
         });
         // Load logo URL if exists
         if (player.logoUrl) {
@@ -99,6 +101,7 @@ const ScreenEdit = () => {
           heightCalibration: null,
           heightCalibrationEnabled: true,
           paymentAmount: null,
+          flowDrawerEnabled: true,
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -115,7 +118,9 @@ const ScreenEdit = () => {
         playlistEndDate: null,
         isActive: screen?.status !== "offline",
         heightCalibration: null,
+        heightCalibrationEnabled: true,
         paymentAmount: null,
+        flowDrawerEnabled: true,
       });
       setLogoUrl(null);
       setLogoPreview(null);
@@ -291,6 +296,7 @@ const ScreenEdit = () => {
         heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
         heightCalibrationEnabled: formData.heightCalibrationEnabled,
         paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
+        flowDrawerEnabled: formData.flowDrawerEnabled,
       };
       
       // Always include playlist fields - send null to clear, or values to set
@@ -754,6 +760,21 @@ const ScreenEdit = () => {
                     id="isActive"
                     checked={formData.isActive}
                     onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  />
+                </div>
+                
+                {/* Flow Drawer Toggle */}
+                <div className="flex items-center justify-between space-x-2 py-2 border-t">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="flowDrawerEnabled">Flow Drawer</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Show a drawer from the right when a flow is active
+                    </p>
+                  </div>
+                  <Switch
+                    id="flowDrawerEnabled"
+                    checked={formData.flowDrawerEnabled}
+                    onCheckedChange={(checked) => setFormData({ ...formData, flowDrawerEnabled: checked })}
                   />
                 </div>
 
