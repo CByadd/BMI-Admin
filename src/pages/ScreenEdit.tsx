@@ -80,6 +80,12 @@ const ScreenEdit = () => {
           heightCalibrationEnabled: player.heightCalibrationEnabled !== undefined ? player.heightCalibrationEnabled : true,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
           flowDrawerEnabled: player.flowDrawerEnabled !== undefined ? player.flowDrawerEnabled : true,
+          flowDrawerImage1Url: player.flowDrawerImage1Url || null,
+          flowDrawerImage1File: null,
+          flowDrawerImage1Preview: player.flowDrawerImage1Url || null,
+          flowDrawerImage2Url: player.flowDrawerImage2Url || null,
+          flowDrawerImage2File: null,
+          flowDrawerImage2Preview: player.flowDrawerImage2Url || null,
         });
         // Load logo URL if exists
         if (player.logoUrl) {
@@ -102,6 +108,12 @@ const ScreenEdit = () => {
           heightCalibrationEnabled: true,
           paymentAmount: null,
           flowDrawerEnabled: true,
+          flowDrawerImage1Url: null,
+          flowDrawerImage1File: null,
+          flowDrawerImage1Preview: null,
+          flowDrawerImage2Url: null,
+          flowDrawerImage2File: null,
+          flowDrawerImage2Preview: null,
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -121,6 +133,12 @@ const ScreenEdit = () => {
         heightCalibrationEnabled: true,
         paymentAmount: null,
         flowDrawerEnabled: true,
+        flowDrawerImage1Url: null,
+        flowDrawerImage1File: null,
+        flowDrawerImage1Preview: null,
+        flowDrawerImage2Url: null,
+        flowDrawerImage2File: null,
+        flowDrawerImage2Preview: null,
       });
       setLogoUrl(null);
       setLogoPreview(null);
@@ -777,6 +795,296 @@ const ScreenEdit = () => {
                     onCheckedChange={(checked) => setFormData({ ...formData, flowDrawerEnabled: checked })}
                   />
                 </div>
+
+                {/* Flow Drawer Images Section */}
+                {formData.flowDrawerEnabled && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <Label>Flow Drawer Images</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Upload images for the two sections of the flow drawer. Images will be displayed horizontally side by side.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* First Flow Drawer Image */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Flow Drawer Image 1 (Left)</Label>
+                          {formData.flowDrawerImage1Url && !formData.flowDrawerImage1File && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                if (!id) return;
+                                try {
+                                  const response = await api.deleteFlowDrawerImage(id, 1);
+                                  if (response.ok) {
+                                    setFormData({ ...formData, flowDrawerImage1Url: null });
+                                    toast({
+                                      title: "Success",
+                                      description: "Image deleted successfully",
+                                    });
+                                    await refreshScreens();
+                                  } else {
+                                    throw new Error(response.error || 'Delete failed');
+                                  }
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Delete failed",
+                                    description: error?.message || "Failed to delete image",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                        {formData.flowDrawerImage1Preview && (
+                          <div className="relative inline-block">
+                            <img 
+                              src={formData.flowDrawerImage1Preview} 
+                              alt="Flow drawer image 1 preview" 
+                              className="h-32 w-full object-cover border border-border rounded-lg"
+                            />
+                            {formData.flowDrawerImage1File && (
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                onClick={() => {
+                                  setFormData({ 
+                                    ...formData, 
+                                    flowDrawerImage1File: null,
+                                    flowDrawerImage1Preview: formData.flowDrawerImage1Url 
+                                  });
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (!file.type.startsWith('image/')) {
+                                    toast({
+                                      title: "Invalid file type",
+                                      description: "Please select an image file",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    toast({
+                                      title: "File too large",
+                                      description: "Image must be less than 5MB",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setFormData({ 
+                                      ...formData, 
+                                      flowDrawerImage1File: file,
+                                      flowDrawerImage1Preview: reader.result as string
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="cursor-pointer"
+                            />
+                          </div>
+                          {formData.flowDrawerImage1File && (
+                            <Button
+                              type="button"
+                              onClick={async () => {
+                                if (!formData.flowDrawerImage1File || !id) return;
+                                try {
+                                  const response = await api.uploadFlowDrawerImage(id, 1, formData.flowDrawerImage1File);
+                                  if (response.ok) {
+                                    setFormData({ 
+                                      ...formData, 
+                                      flowDrawerImage1Url: response.imageUrl || response.player?.flowDrawerImage1Url,
+                                      flowDrawerImage1File: null,
+                                      flowDrawerImage1Preview: response.imageUrl || response.player?.flowDrawerImage1Url
+                                    });
+                                    toast({
+                                      title: "Success",
+                                      description: "Image uploaded successfully",
+                                    });
+                                    await refreshScreens();
+                                  } else {
+                                    throw new Error(response.error || 'Upload failed');
+                                  }
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Upload failed",
+                                    description: error?.message || "Failed to upload image",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Second Flow Drawer Image */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Flow Drawer Image 2 (Right)</Label>
+                          {formData.flowDrawerImage2Url && !formData.flowDrawerImage2File && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                if (!id) return;
+                                try {
+                                  const response = await api.deleteFlowDrawerImage(id, 2);
+                                  if (response.ok) {
+                                    setFormData({ ...formData, flowDrawerImage2Url: null });
+                                    toast({
+                                      title: "Success",
+                                      description: "Image deleted successfully",
+                                    });
+                                    await refreshScreens();
+                                  } else {
+                                    throw new Error(response.error || 'Delete failed');
+                                  }
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Delete failed",
+                                    description: error?.message || "Failed to delete image",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                        {formData.flowDrawerImage2Preview && (
+                          <div className="relative inline-block">
+                            <img 
+                              src={formData.flowDrawerImage2Preview} 
+                              alt="Flow drawer image 2 preview" 
+                              className="h-32 w-full object-cover border border-border rounded-lg"
+                            />
+                            {formData.flowDrawerImage2File && (
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                onClick={() => {
+                                  setFormData({ 
+                                    ...formData, 
+                                    flowDrawerImage2File: null,
+                                    flowDrawerImage2Preview: formData.flowDrawerImage2Url 
+                                  });
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (!file.type.startsWith('image/')) {
+                                    toast({
+                                      title: "Invalid file type",
+                                      description: "Please select an image file",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    toast({
+                                      title: "File too large",
+                                      description: "Image must be less than 5MB",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setFormData({ 
+                                      ...formData, 
+                                      flowDrawerImage2File: file,
+                                      flowDrawerImage2Preview: reader.result as string
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="cursor-pointer"
+                            />
+                          </div>
+                          {formData.flowDrawerImage2File && (
+                            <Button
+                              type="button"
+                              onClick={async () => {
+                                if (!formData.flowDrawerImage2File || !id) return;
+                                try {
+                                  const response = await api.uploadFlowDrawerImage(id, 2, formData.flowDrawerImage2File);
+                                  if (response.ok) {
+                                    setFormData({ 
+                                      ...formData, 
+                                      flowDrawerImage2Url: response.imageUrl || response.player?.flowDrawerImage2Url,
+                                      flowDrawerImage2File: null,
+                                      flowDrawerImage2Preview: response.imageUrl || response.player?.flowDrawerImage2Url
+                                    });
+                                    toast({
+                                      title: "Success",
+                                      description: "Image uploaded successfully",
+                                    });
+                                    await refreshScreens();
+                                  } else {
+                                    throw new Error(response.error || 'Upload failed');
+                                  }
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Upload failed",
+                                    description: error?.message || "Failed to upload image",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-2 pt-4 border-t">

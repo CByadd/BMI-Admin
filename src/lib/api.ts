@@ -24,6 +24,8 @@ export const API_ENDPOINTS = {
     UPLOAD_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
     GET_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
     DELETE_LOGO: (screenId: string) => `/api/adscape/player/${screenId}/logo`,
+    UPLOAD_FLOW_DRAWER_IMAGE: (screenId: string, imageNumber: number) => `/api/adscape/player/${screenId}/flow-drawer-image/${imageNumber}`,
+    DELETE_FLOW_DRAWER_IMAGE: (screenId: string, imageNumber: number) => `/api/adscape/player/${screenId}/flow-drawer-image/${imageNumber}`,
     DELETE: (screenId: string) => `/api/adscape/player/${screenId}`,
   },
 
@@ -164,6 +166,30 @@ export const api = {
   },
   getLogo: (screenId: string) => apiRequest('GET', API_ENDPOINTS.SCREENS.GET_LOGO(screenId)),
   deleteLogo: (screenId: string) => apiRequest('DELETE', API_ENDPOINTS.SCREENS.DELETE_LOGO(screenId)),
+  uploadFlowDrawerImage: async (screenId: string, imageNumber: number, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const { setLoading, setError } = useApiStore.getState();
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axiosInstance.post(API_ENDPOINTS.SCREENS.UPLOAD_FLOW_DRAWER_IMAGE(screenId, imageNumber), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.message || 'An error occurred';
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  },
+  deleteFlowDrawerImage: (screenId: string, imageNumber: number) => 
+    apiRequest('DELETE', API_ENDPOINTS.SCREENS.DELETE_FLOW_DRAWER_IMAGE(screenId, imageNumber)),
   deletePlayer: (screenId: string) => apiRequest('DELETE', API_ENDPOINTS.SCREENS.DELETE(screenId)),
 
   // Analytics
