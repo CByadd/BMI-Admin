@@ -3,9 +3,7 @@
  */
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  import.meta.env.REACT_APP_API_URL || 
-  'https://bmi-server-eight.vercel.app';
+const API_BASE_URL = 'https://bmi-server-eight.vercel.app';
 
 /**
  * Get auth token from localStorage
