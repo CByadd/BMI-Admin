@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Upload, X, Loader2, CalendarIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,8 @@ const ScreenEdit = () => {
     heightCalibrationEnabled: true,
     paymentAmount: null as number | null,
     flowDrawerEnabled: true,
+    flowDrawerSlotCount: 2,
+    flowDrawerSlots: [] as Array<{ url: string | null; file: File | null; preview: string | null }>,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -52,6 +55,9 @@ const ScreenEdit = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState(0);
+  const [uploadingSlots, setUploadingSlots] = useState<Record<number, boolean>>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
 
   // Load playlists and current assignment when component mounts
   useEffect(() => {
@@ -69,6 +75,68 @@ const ScreenEdit = () => {
       const response = await api.getPlayer(id);
       if (response.ok && response.player) {
         const player = response.player;
+        // Check for slot count - use explicit check for null/undefined, not just falsy
+        const slotCount = (player.flowDrawerSlotCount !== null && player.flowDrawerSlotCount !== undefined) 
+          ? player.flowDrawerSlotCount 
+          : 2;
+        
+        console.log('DEBUG: Loading player data:', {
+          flowDrawerSlotCount: player.flowDrawerSlotCount,
+          slotCount,
+          flowDrawerImage1Url: player.flowDrawerImage1Url,
+          flowDrawerImage2Url: player.flowDrawerImage2Url,
+          flowDrawerImage3Url: player.flowDrawerImage3Url,
+          flowDrawerImage4Url: player.flowDrawerImage4Url,
+          flowDrawerImage5Url: player.flowDrawerImage5Url,
+        });
+        
+        // Load from individual URL fields based on slot count
+        const flowDrawerSlots: Array<{ url: string | null; file: File | null; preview: string | null }> = [];
+        
+        // Build slots array from individual URL fields
+        if (slotCount >= 1) {
+          flowDrawerSlots.push({ 
+            url: player.flowDrawerImage1Url || null, 
+            file: null, 
+            preview: player.flowDrawerImage1Url || null 
+          });
+        }
+        if (slotCount >= 2) {
+          flowDrawerSlots.push({ 
+            url: player.flowDrawerImage2Url || null, 
+            file: null, 
+            preview: player.flowDrawerImage2Url || null 
+          });
+        }
+        if (slotCount >= 3) {
+          flowDrawerSlots.push({ 
+            url: player.flowDrawerImage3Url || null, 
+            file: null, 
+            preview: player.flowDrawerImage3Url || null 
+          });
+        }
+        if (slotCount >= 4) {
+          flowDrawerSlots.push({ 
+            url: player.flowDrawerImage4Url || null, 
+            file: null, 
+            preview: player.flowDrawerImage4Url || null 
+          });
+        }
+        if (slotCount >= 5) {
+          flowDrawerSlots.push({ 
+            url: player.flowDrawerImage5Url || null, 
+            file: null, 
+            preview: player.flowDrawerImage5Url || null 
+          });
+        }
+        
+        // Ensure slots array has correct length (fill empty slots)
+        while (flowDrawerSlots.length < slotCount) {
+          flowDrawerSlots.push({ url: null, file: null, preview: null });
+        }
+        
+        console.log('DEBUG: Loaded flow drawer slots:', flowDrawerSlots);
+        
         setFormData({
           name: player.deviceName || screen?.name || "",
           location: player.location || screen?.location || "",
@@ -80,12 +148,8 @@ const ScreenEdit = () => {
           heightCalibrationEnabled: player.heightCalibrationEnabled !== undefined ? player.heightCalibrationEnabled : true,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
           flowDrawerEnabled: player.flowDrawerEnabled !== undefined ? player.flowDrawerEnabled : true,
-          flowDrawerImage1Url: player.flowDrawerImage1Url || null,
-          flowDrawerImage1File: null,
-          flowDrawerImage1Preview: player.flowDrawerImage1Url || null,
-          flowDrawerImage2Url: player.flowDrawerImage2Url || null,
-          flowDrawerImage2File: null,
-          flowDrawerImage2Preview: player.flowDrawerImage2Url || null,
+          flowDrawerSlotCount: slotCount,
+          flowDrawerSlots: flowDrawerSlots,
         });
         // Load logo URL if exists
         if (player.logoUrl) {
@@ -108,12 +172,8 @@ const ScreenEdit = () => {
           heightCalibrationEnabled: true,
           paymentAmount: null,
           flowDrawerEnabled: true,
-          flowDrawerImage1Url: null,
-          flowDrawerImage1File: null,
-          flowDrawerImage1Preview: null,
-          flowDrawerImage2Url: null,
-          flowDrawerImage2File: null,
-          flowDrawerImage2Preview: null,
+          flowDrawerSlotCount: 2,
+          flowDrawerSlots: [{ url: null, file: null, preview: null }, { url: null, file: null, preview: null }],
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -133,12 +193,8 @@ const ScreenEdit = () => {
         heightCalibrationEnabled: true,
         paymentAmount: null,
         flowDrawerEnabled: true,
-        flowDrawerImage1Url: null,
-        flowDrawerImage1File: null,
-        flowDrawerImage1Preview: null,
-        flowDrawerImage2Url: null,
-        flowDrawerImage2File: null,
-        flowDrawerImage2Preview: null,
+        flowDrawerSlotCount: 2,
+        flowDrawerSlots: [{ url: null, file: null, preview: null }, { url: null, file: null, preview: null }],
       });
       setLogoUrl(null);
       setLogoPreview(null);
@@ -211,29 +267,44 @@ const ScreenEdit = () => {
     }
 
     setIsUploadingLogo(true);
+    setLogoUploadProgress(0);
+    
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setLogoUploadProgress(prev => Math.min(prev + 10, 90));
+    }, 200);
+    
     try {
       const response = await api.uploadLogo(id, logoFile);
+      clearInterval(progressInterval);
+      setLogoUploadProgress(100);
+      
       if (response.ok) {
-        setLogoUrl(response.logoUrl);
-        setLogoPreview(response.logoUrl);
-        setLogoFile(null);
-        toast({
-          title: "Success",
-          description: "Logo uploaded successfully",
-        });
-        await refreshScreens();
+        setTimeout(() => {
+          setLogoUrl(response.logoUrl);
+          setLogoPreview(response.logoUrl);
+          setLogoFile(null);
+          setIsUploadingLogo(false);
+          setLogoUploadProgress(0);
+          toast({
+            title: "Success",
+            description: "Logo uploaded successfully",
+          });
+          refreshScreens();
+        }, 300);
       } else {
         throw new Error(response.error || 'Upload failed');
       }
     } catch (error: any) {
+      clearInterval(progressInterval);
+      setIsUploadingLogo(false);
+      setLogoUploadProgress(0);
       console.error("Error uploading logo:", error);
       toast({
         title: "Upload failed",
         description: error?.message || "Failed to upload logo. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsUploadingLogo(false);
     }
   };
 
@@ -315,7 +386,10 @@ const ScreenEdit = () => {
         heightCalibrationEnabled: formData.heightCalibrationEnabled,
         paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
         flowDrawerEnabled: formData.flowDrawerEnabled,
+        flowDrawerSlotCount: formData.flowDrawerSlotCount || 2, // Ensure we always send a value
       };
+      
+      console.log('DEBUG: Saving screen config with slot count:', formData.flowDrawerSlotCount);
       
       // Always include playlist fields - send null to clear, or values to set
       // IMPORTANT: Always send playlistId (even if null) so backend knows to process it
@@ -467,143 +541,216 @@ const ScreenEdit = () => {
                   </div>
                 </div>
 
-                {/* Second row: Height Calibration and Payment Amount */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
-                    <Input
-                      id="heightCalibration"
-                      type="number"
-                      step="0.1"
-                      value={formData.heightCalibration ?? ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFormData({ 
-                          ...formData, 
-                          heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
-                        });
-                      }}
-                      placeholder="Leave empty for default (0)"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
-                    </p>
-                    <div className="flex items-center justify-between space-x-2 pt-2">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="heightCalibrationEnabled" className="text-sm">Height Calibration Enabled</Label>
+                {/* Second row: Height Calibration and Payment Amount with Logo Upload */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
+                        <Input
+                          id="heightCalibration"
+                          type="number"
+                          step="0.1"
+                          value={formData.heightCalibration ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFormData({ 
+                              ...formData, 
+                              heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                            });
+                          }}
+                          placeholder="Leave empty for default (0)"
+                        />
                         <p className="text-xs text-muted-foreground">
-                          Enable height calibration validation
+                          Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
+                        </p>
+                        <div className="flex items-center justify-between space-x-2 pt-2">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="heightCalibrationEnabled" className="text-sm">Height Calibration Enabled</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable height calibration validation
+                            </p>
+                          </div>
+                          <Switch
+                            id="heightCalibrationEnabled"
+                            checked={formData.heightCalibrationEnabled}
+                            onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
+                        <Input
+                          id="paymentAmount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.paymentAmount ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFormData({ 
+                              ...formData, 
+                              paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                            });
+                          }}
+                          placeholder="Leave empty for default (₹9)"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
                         </p>
                       </div>
-                      <Switch
-                        id="heightCalibrationEnabled"
-                        checked={formData.heightCalibrationEnabled}
-                        onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
-                      />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
-                    <Input
-                      id="paymentAmount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.paymentAmount ?? ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFormData({ 
-                          ...formData, 
-                          paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
-                        });
-                      }}
-                      placeholder="Leave empty for default (₹9)"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
-                    </p>
-                  </div>
-                </div>
-
-                {/* Logo Upload Section */}
-                <div className="space-y-2 pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <Label>Screen Logo</Label>
-                    {logoUrl && !logoFile && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDeleteLogo}
-                        disabled={isDeletingLogo}
-                      >
-                        {isDeletingLogo ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Deleting...
-                          </>
-                        ) : (
-                          <>
-                            <X className="w-4 h-4 mr-2" />
-                            Delete Logo
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    {logoPreview && (
-                      <div className="relative inline-block">
-                        <img 
-                          src={logoPreview} 
-                          alt="Logo preview" 
-                          className="h-32 w-auto object-contain border border-border rounded-lg p-2 bg-muted"
-                        />
-                        {logoFile && (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                            onClick={handleRemoveLogo}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoFileChange}
-                          className="cursor-pointer"
-                        />
-                      </div>
-                      {logoFile && (
-                        <Button
-                          type="button"
-                          onClick={handleLogoUpload}
-                          disabled={isUploadingLogo}
-                        >
-                          {isUploadingLogo ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload Logo
-                            </>
+                  
+                  {/* Logo Upload Section - Smaller, on the right */}
+                  <div className="md:col-span-1">
+                    <Card className={`transition-all h-full ${isUploadingLogo ? 'ring-2 ring-primary' : ''}`}>
+                      <CardContent className="p-3 space-y-2">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${logoUrl || logoFile ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                            <Label className="text-xs font-medium">Logo</Label>
+                          </div>
+                          {logoUrl && !logoFile && !isUploadingLogo && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={handleDeleteLogo}
+                              disabled={isDeletingLogo}
+                            >
+                              {isDeletingLogo ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <X className="w-3 h-3" />
+                              )}
+                            </Button>
                           )}
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Upload a logo image for this screen. The logo will be displayed at the top of modals in the Android app. Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.
-                    </p>
+                        </div>
+                        
+                        {/* Logo Preview - Smaller, square */}
+                        {logoPreview ? (
+                          <div className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-border bg-muted/50 flex items-center justify-center">
+                            <img 
+                              src={logoPreview} 
+                              alt="Logo preview" 
+                              className="max-w-full max-h-full object-contain p-1.5"
+                            />
+                            
+                            {/* Upload Progress Overlay */}
+                            {isUploadingLogo && (
+                              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-2">
+                                <Loader2 className="w-6 h-6 animate-spin text-white" />
+                                <div className="w-full space-y-1">
+                                  <Progress value={logoUploadProgress} className="h-1.5" />
+                                  <p className="text-white text-[10px] text-center font-medium">{logoUploadProgress}%</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Remove Selected File Button */}
+                            {logoFile && !isUploadingLogo && (
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-5 w-5 rounded-full shadow-lg"
+                                onClick={handleRemoveLogo}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                            
+                            {/* Status Badge */}
+                            {logoUrl && !logoFile && !isUploadingLogo && (
+                              <div className="absolute bottom-1 left-1 bg-green-500/90 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative w-full aspect-square rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex flex-col items-center justify-center gap-1.5 p-2 transition-colors hover:border-primary/50 hover:bg-muted/50">
+                            {isUploadingLogo ? (
+                              <>
+                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                                <div className="w-full space-y-1">
+                                  <Progress value={logoUploadProgress} className="h-1.5" />
+                                  <p className="text-[10px] text-center font-medium text-muted-foreground">{logoUploadProgress}%</p>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-5 h-5 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground text-center">No logo</p>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* File Input - Smaller */}
+                        <div className="space-y-1">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploadingLogo}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              
+                              // Validate file type
+                              if (!file.type.startsWith('image/')) {
+                                toast({
+                                  title: "Invalid file type",
+                                  description: "Please select an image file (PNG, JPG, GIF, etc.)",
+                                  variant: "destructive",
+                                });
+                                e.target.value = '';
+                                return;
+                              }
+                              
+                              // Validate file size (5MB max)
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast({
+                                  title: "File too large",
+                                  description: `Logo must be less than 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                                  variant: "destructive",
+                                });
+                                e.target.value = '';
+                                return;
+                              }
+                              
+                              setLogoFile(file);
+                              // Create preview
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setLogoPreview(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                              
+                              // Auto-upload immediately
+                              if (!id) return;
+                              await handleLogoUpload();
+                              
+                              e.target.value = ''; // Reset input for re-upload
+                            }}
+                            className="cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-xs h-8"
+                          />
+                          <p className="text-[10px] text-muted-foreground">
+                            {logoFile ? (
+                              <span className="text-primary font-medium truncate block">
+                                {logoFile.name.length > 15 ? `${logoFile.name.substring(0, 15)}...` : logoFile.name}
+                              </span>
+                            ) : logoUrl ? (
+                              <span className="text-green-600">Uploaded</span>
+                            ) : (
+                              <span>Max 5MB</span>
+                            )}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
                 
@@ -796,33 +943,112 @@ const ScreenEdit = () => {
                   />
                 </div>
 
-                {/* Flow Drawer Images Section */}
+                {/* Flow Drawer Configuration */}
                 {formData.flowDrawerEnabled && (
                   <div className="space-y-4 pt-4 border-t">
-                    <Label>Flow Drawer Images</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="flowDrawerSlotCount">Flow Drawer Slot Count</Label>
+                      <Select
+                        value={formData.flowDrawerSlotCount.toString()}
+                        onValueChange={(value) => {
+                          const newSlotCount = parseInt(value);
+                          const currentSlots = [...formData.flowDrawerSlots];
+                          
+                          // Resize slots array
+                          if (newSlotCount > currentSlots.length) {
+                            // Add empty slots
+                            while (currentSlots.length < newSlotCount) {
+                              currentSlots.push({ url: null, file: null, preview: null });
+                            }
+                          } else if (newSlotCount < currentSlots.length) {
+                            // Remove extra slots
+                            currentSlots.splice(newSlotCount);
+                          }
+                          
+                          setFormData({ ...formData, flowDrawerSlotCount: newSlotCount, flowDrawerSlots: currentSlots });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select slot count" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2">2 Slots</SelectItem>
+                          <SelectItem value="3">3 Slots</SelectItem>
+                          <SelectItem value="5">5 Slots</SelectItem>
+                        </SelectContent>
+                      </Select>
                     <p className="text-xs text-muted-foreground">
-                      Upload images for the two sections of the flow drawer. Images will be displayed horizontally side by side.
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* First Flow Drawer Image */}
-                      <div className="space-y-2">
+                        Select the number of image slots for the flow drawer. Each slot can have an image.
+                      </p>
+                    </div>
+
+                    {/* Flow Drawer Images Section */}
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <Label className="text-base font-semibold">Flow Drawer Images</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Upload images for each slot. Images will be displayed in the flow drawer when a flow is active.
+                        </p>
+                      </div>
+                      
+                      {/* Layout: Upload fields on left, Preview on right */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Upload Fields - Takes 2 columns */}
+                        <div className="lg:col-span-2">
+                          {/* Flexible responsive grid that adapts to slot count and screen size */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-fr">
+                            {formData.flowDrawerSlots.map((slot, index) => {
+                              const isUploading = uploadingSlots[index] || false;
+                              const progress = uploadProgress[index] || 0;
+                              const hasImage = slot.url || slot.file;
+                              
+                              return (
+                                <Card 
+                                  key={index} 
+                                  className={`transition-all flex flex-col h-full ${isUploading ? 'ring-2 ring-primary' : ''}`}
+                                >
+                                  <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
+                                    {/* Header */}
                         <div className="flex items-center justify-between">
-                          <Label>Flow Drawer Image 1 (Left)</Label>
-                          {formData.flowDrawerImage1Url && !formData.flowDrawerImage1File && (
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${hasImage ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                                        <div className="flex flex-col">
+                                          <Label className="text-sm font-medium">Slot {index + 1}</Label>
+                                          <span className="text-[10px] text-muted-foreground font-mono">
+                                            → flowDrawerImage{index + 1}Url
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {slot.url && !slot.file && !isUploading && (
                             <Button
                               type="button"
-                              variant="destructive"
+                                          variant="ghost"
                               size="sm"
+                                          className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={async () => {
                                 if (!id) return;
+                                const imageNumber = index + 1;
+                                const dbFieldMap: Record<number, string> = {
+                                  1: 'flowDrawerImage1Url',
+                                  2: 'flowDrawerImage2Url',
+                                  3: 'flowDrawerImage3Url',
+                                  4: 'flowDrawerImage4Url',
+                                  5: 'flowDrawerImage5Url'
+                                };
+                                
+                                if (!confirm(`Are you sure you want to delete the image for Slot ${index + 1} (${dbFieldMap[imageNumber]})?`)) return;
+                                
                                 try {
-                                  const response = await api.deleteFlowDrawerImage(id, 1);
+                                  console.log(`[Flow Drawer Delete] Slot ${index + 1} → imageNumber: ${imageNumber} → Database Field: ${dbFieldMap[imageNumber]}`);
+                                  const response = await api.deleteFlowDrawerImage(id, imageNumber);
                                   if (response.ok) {
-                                    setFormData({ ...formData, flowDrawerImage1Url: null });
+                                    console.log(`[Flow Drawer Delete] Success! Cleared ${dbFieldMap[imageNumber]}`);
+                                    const newSlots = [...formData.flowDrawerSlots];
+                                    newSlots[index] = { url: null, file: null, preview: null };
+                                    setFormData({ ...formData, flowDrawerSlots: newSlots });
                                     toast({
                                       title: "Success",
-                                      description: "Image deleted successfully",
+                                      description: `Slot ${index + 1} image deleted from ${dbFieldMap[imageNumber]}`,
                                     });
                                     await refreshScreens();
                                   } else {
@@ -837,249 +1063,310 @@ const ScreenEdit = () => {
                                 }
                               }}
                             >
-                              <X className="w-4 h-4 mr-2" />
-                              Delete
+                                          <X className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
-                        {formData.flowDrawerImage1Preview && (
-                          <div className="relative inline-block">
-                            <img 
-                              src={formData.flowDrawerImage1Preview} 
-                              alt="Flow drawer image 1 preview" 
-                              className="h-32 w-full object-cover border border-border rounded-lg"
-                            />
-                            {formData.flowDrawerImage1File && (
+                                    
+                                    {/* Image Preview */}
+                                    {slot.preview ? (
+                                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-border bg-muted/50">
+                                        <img 
+                                          src={slot.preview} 
+                                          alt={`Flow drawer slot ${index + 1}`} 
+                                          className="w-full h-full object-cover"
+                                        />
+                                        
+                                        {/* Upload Progress Overlay */}
+                                        {isUploading && (
+                                          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4">
+                                            <Loader2 className="w-8 h-8 animate-spin text-white" />
+                                            <div className="w-full max-w-[200px] space-y-2">
+                                              <Progress value={progress} className="h-2" />
+                                              <p className="text-white text-xs text-center font-medium">{progress}%</p>
+                                              <p className="text-white/80 text-xs text-center">Uploading...</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Remove Selected File Button */}
+                                        {slot.file && !isUploading && (
                               <Button
                                 type="button"
                                 variant="destructive"
                                 size="icon"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                            className="absolute top-2 right-2 h-7 w-7 rounded-full shadow-lg"
                                 onClick={() => {
-                                  setFormData({ 
-                                    ...formData, 
-                                    flowDrawerImage1File: null,
-                                    flowDrawerImage1Preview: formData.flowDrawerImage1Url 
-                                  });
+                                              const newSlots = [...formData.flowDrawerSlots];
+                                              newSlots[index] = { ...newSlots[index], file: null, preview: newSlots[index].url || null };
+                                              setFormData({ ...formData, flowDrawerSlots: newSlots });
+                                              setUploadingSlots({ ...uploadingSlots, [index]: false });
+                                              setUploadProgress({ ...uploadProgress, [index]: 0 });
                                 }}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
                             )}
+                                        
+                                        {/* Status Badge */}
+                                        {slot.url && !slot.file && !isUploading && (
+                                          <div className="absolute bottom-2 left-2 bg-green-500/90 text-white text-xs px-2 py-1 rounded-md font-medium">
+                                            Uploaded
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <div className="flex-1">
+                                      </div>
+                                    ) : (
+                                      <div className="relative w-full aspect-video rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex flex-col items-center justify-center gap-2 p-4 transition-colors hover:border-primary/50 hover:bg-muted/50">
+                                        {isUploading ? (
+                                          <>
+                                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                            <div className="w-full max-w-[200px] space-y-2">
+                                              <Progress value={progress} className="h-2" />
+                                              <p className="text-xs text-center font-medium text-muted-foreground">{progress}%</p>
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Upload className="w-8 h-8 text-muted-foreground" />
+                                            <p className="text-xs text-muted-foreground text-center">No image</p>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                    
+                                    {/* File Input */}
+                                    <div className="space-y-2">
                             <Input
                               type="file"
                               accept="image/*"
-                              onChange={(e) => {
+                                        disabled={isUploading}
+                                        onChange={async (e) => {
                                 const file = e.target.files?.[0];
-                                if (file) {
+                                          if (!file) return;
+                                          
+                                          // Validate file type
                                   if (!file.type.startsWith('image/')) {
                                     toast({
                                       title: "Invalid file type",
-                                      description: "Please select an image file",
+                                              description: "Please select an image file (PNG, JPG, GIF, etc.)",
                                       variant: "destructive",
                                     });
+                                            e.target.value = ''; // Reset input
                                     return;
                                   }
+                                          
+                                          // Validate file size (5MB max)
                                   if (file.size > 5 * 1024 * 1024) {
                                     toast({
                                       title: "File too large",
-                                      description: "Image must be less than 5MB",
+                                              description: `Image must be less than 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
                                       variant: "destructive",
                                     });
+                                            e.target.value = ''; // Reset input
                                     return;
                                   }
+                                          
+                                          // Create preview
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
-                                    setFormData({ 
-                                      ...formData, 
-                                      flowDrawerImage1File: file,
-                                      flowDrawerImage1Preview: reader.result as string
-                                    });
+                                            const newSlots = [...formData.flowDrawerSlots];
+                                            newSlots[index] = { ...newSlots[index], file, preview: reader.result as string };
+                                            setFormData({ ...formData, flowDrawerSlots: newSlots });
                                   };
                                   reader.readAsDataURL(file);
-                                }
-                              }}
-                              className="cursor-pointer"
-                            />
-                          </div>
-                          {formData.flowDrawerImage1File && (
-                            <Button
-                              type="button"
-                              onClick={async () => {
-                                if (!formData.flowDrawerImage1File || !id) return;
-                                try {
-                                  const response = await api.uploadFlowDrawerImage(id, 1, formData.flowDrawerImage1File);
+                                          
+                                          // Auto-upload immediately
+                                          if (!id) return;
+                                          
+                                          // Set uploading state using functional updates
+                                          setUploadingSlots(prev => ({ ...prev, [index]: true }));
+                                          setUploadProgress(prev => ({ ...prev, [index]: 0 }));
+                                          
+                                          // Simulate progress
+                                          let progressInterval: NodeJS.Timeout | null = null;
+                                          progressInterval = setInterval(() => {
+                                            setUploadProgress(prev => ({
+                                              ...prev,
+                                              [index]: Math.min((prev[index] || 0) + 10, 90)
+                                            }));
+                                          }, 200);
+                                          
+                                          try {
+                                            // Map slot index to database field
+                                            const imageNumber = index + 1; // 1-based for API (1, 2, 3, 4, 5)
+                                            const dbFieldMap: Record<number, string> = {
+                                              1: 'flowDrawerImage1Url',
+                                              2: 'flowDrawerImage2Url',
+                                              3: 'flowDrawerImage3Url',
+                                              4: 'flowDrawerImage4Url',
+                                              5: 'flowDrawerImage5Url'
+                                            };
+                                            
+                                            console.log(`[Flow Drawer Upload] Slot ${index + 1} → imageNumber: ${imageNumber} → Database Field: ${dbFieldMap[imageNumber]}`);
+                                            
+                                            const response = await api.uploadFlowDrawerImage(id, imageNumber, file);
+                                            
+                                            // Clear progress interval
+                                            if (progressInterval) {
+                                              clearInterval(progressInterval);
+                                              progressInterval = null;
+                                            }
+                                            
+                                            // Set progress to 100%
+                                            setUploadProgress(prev => ({ ...prev, [index]: 100 }));
+                                            
                                   if (response.ok) {
-                                    setFormData({ 
-                                      ...formData, 
-                                      flowDrawerImage1Url: response.imageUrl || response.player?.flowDrawerImage1Url,
-                                      flowDrawerImage1File: null,
-                                      flowDrawerImage1Preview: response.imageUrl || response.player?.flowDrawerImage1Url
-                                    });
+                                              console.log(`[Flow Drawer Upload] Success! Slot ${index + 1} saved to ${dbFieldMap[imageNumber]}`);
+                                              
+                                              // Update slots with new URL
+                                              const newSlots = [...formData.flowDrawerSlots];
+                                              newSlots[index] = { 
+                                                url: response.imageUrl || null, 
+                                                file: null, 
+                                                preview: response.imageUrl || null 
+                                              };
+                                              setFormData(prev => ({ ...prev, flowDrawerSlots: newSlots }));
+                                              
+                                              // Clear uploading state immediately
+                                              setUploadingSlots(prev => ({ ...prev, [index]: false }));
+                                              setUploadProgress(prev => ({ ...prev, [index]: 0 }));
+                                              
                                     toast({
                                       title: "Success",
-                                      description: "Image uploaded successfully",
+                                                description: `Slot ${index + 1} image uploaded to ${dbFieldMap[imageNumber]}`,
                                     });
-                                    await refreshScreens();
+                                              
+                                              refreshScreens();
                                   } else {
                                     throw new Error(response.error || 'Upload failed');
                                   }
                                 } catch (error: any) {
+                                            // Clear progress interval
+                                            if (progressInterval) {
+                                              clearInterval(progressInterval);
+                                              progressInterval = null;
+                                            }
+                                            
+                                            // Clear uploading state immediately on error
+                                            setUploadingSlots(prev => ({ ...prev, [index]: false }));
+                                            setUploadProgress(prev => ({ ...prev, [index]: 0 }));
+                                            
+                                            // Reset slot to previous state
+                                            setFormData(prev => {
+                                              const newSlots = [...prev.flowDrawerSlots];
+                                              newSlots[index] = { 
+                                                ...newSlots[index], 
+                                                file: null, 
+                                                preview: newSlots[index].url || null 
+                                              };
+                                              return { ...prev, flowDrawerSlots: newSlots };
+                                            });
+                                            
                                   toast({
                                     title: "Upload failed",
-                                    description: error?.message || "Failed to upload image",
+                                              description: error?.message || "Failed to upload image. Please try again.",
                                     variant: "destructive",
                                   });
-                                }
-                              }}
-                            >
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload
-                            </Button>
-                          )}
+                                          } finally {
+                                            e.target.value = ''; // Reset input for re-upload
+                                          }
+                                        }}
+                                        className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                      />
+                                      <p className="text-xs text-muted-foreground">
+                                        {slot.file ? (
+                                          <span className="text-primary font-medium">
+                                            Selected: {slot.file.name} ({(slot.file.size / 1024).toFixed(1)} KB)
+                                          </span>
+                                        ) : slot.url ? (
+                                          <span className="text-green-600">Image uploaded</span>
+                                        ) : (
+                                          <span>Max size: 5MB • PNG, JPG, GIF</span>
+                                        )}
+                                      </p>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
                         </div>
                       </div>
 
-                      {/* Second Flow Drawer Image */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label>Flow Drawer Image 2 (Right)</Label>
-                          {formData.flowDrawerImage2Url && !formData.flowDrawerImage2File && (
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={async () => {
-                                if (!id) return;
-                                try {
-                                  const response = await api.deleteFlowDrawerImage(id, 2);
-                                  if (response.ok) {
-                                    setFormData({ ...formData, flowDrawerImage2Url: null });
-                                    toast({
-                                      title: "Success",
-                                      description: "Image deleted successfully",
-                                    });
-                                    await refreshScreens();
-                                  } else {
-                                    throw new Error(response.error || 'Delete failed');
-                                  }
-                                } catch (error: any) {
-                                  toast({
-                                    title: "Delete failed",
-                                    description: error?.message || "Failed to delete image",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                        {formData.flowDrawerImage2Preview && (
-                          <div className="relative inline-block">
-                            <img 
-                              src={formData.flowDrawerImage2Preview} 
-                              alt="Flow drawer image 2 preview" 
-                              className="h-32 w-full object-cover border border-border rounded-lg"
-                            />
-                            {formData.flowDrawerImage2File && (
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                                onClick={() => {
-                                  setFormData({ 
-                                    ...formData, 
-                                    flowDrawerImage2File: null,
-                                    flowDrawerImage2Preview: formData.flowDrawerImage2Url 
-                                  });
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                        {/* Preview - Takes 1 column, smaller */}
+                        <div className="lg:col-span-1">
+                          <Card className="sticky top-4">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm font-semibold">Live Preview</CardTitle>
+                              <p className="text-xs text-muted-foreground">
+                                How images will appear in the flow drawer
+                              </p>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              {/* Portrait Screen Container (9:16 aspect ratio) */}
+                              <div className="relative w-full mx-auto" style={{ aspectRatio: '9/16', maxWidth: '200px' }}>
+                                {/* Main Screen Background */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-lg border-2 border-border shadow-lg">
+                                  {/* Content Area (left half) */}
+                                  <div className="absolute left-0 top-0 bottom-0 w-1/2 flex items-center justify-center">
+                                    <div className="text-[8px] text-muted-foreground/30 text-center font-medium">Content</div>
+                                  </div>
+                                  
+                                  {/* Flow Drawer (right half) */}
+                                  <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-black/95 rounded-r-lg p-1.5 shadow-xl">
+                                    {(() => {
+                                      const slotCount = formData.flowDrawerSlotCount;
+                                      
+                                      return (
+                                        <div 
+                                          className="w-full h-full"
+                                          style={{
+                                            display: 'grid',
+                                            gridTemplateRows: `repeat(${slotCount}, 1fr)`,
+                                            gap: '4px'
+                                          }}
+                                        >
+                                          {/* Render all slots in order */}
+                                          {formData.flowDrawerSlots.map((slot, idx) => (
+                                            <div 
+                                              key={idx} 
+                                              className="w-full rounded overflow-hidden bg-gray-800/50 border border-gray-700/50 transition-all hover:border-gray-600"
+                                              style={{ minHeight: '40px' }}
+                                            >
+                                              {slot.preview ? (
+                                                <img 
+                                                  src={slot.preview} 
+                                                  alt={`Slot ${idx + 1}`}
+                                                  className="w-full h-full object-cover"
+                                                />
+                                              ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px] font-medium">
+                                                  Slot {idx + 1}
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  if (!file.type.startsWith('image/')) {
-                                    toast({
-                                      title: "Invalid file type",
-                                      description: "Please select an image file",
-                                      variant: "destructive",
-                                    });
-                                    return;
-                                  }
-                                  if (file.size > 5 * 1024 * 1024) {
-                                    toast({
-                                      title: "File too large",
-                                      description: "Image must be less than 5MB",
-                                      variant: "destructive",
-                                    });
-                                    return;
-                                  }
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    setFormData({ 
-                                      ...formData, 
-                                      flowDrawerImage2File: file,
-                                      flowDrawerImage2Preview: reader.result as string
-                                    });
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                              className="cursor-pointer"
-                            />
                           </div>
-                          {formData.flowDrawerImage2File && (
-                            <Button
-                              type="button"
-                              onClick={async () => {
-                                if (!formData.flowDrawerImage2File || !id) return;
-                                try {
-                                  const response = await api.uploadFlowDrawerImage(id, 2, formData.flowDrawerImage2File);
-                                  if (response.ok) {
-                                    setFormData({ 
-                                      ...formData, 
-                                      flowDrawerImage2Url: response.imageUrl || response.player?.flowDrawerImage2Url,
-                                      flowDrawerImage2File: null,
-                                      flowDrawerImage2Preview: response.imageUrl || response.player?.flowDrawerImage2Url
-                                    });
-                                    toast({
-                                      title: "Success",
-                                      description: "Image uploaded successfully",
-                                    });
-                                    await refreshScreens();
-                                  } else {
-                                    throw new Error(response.error || 'Upload failed');
-                                  }
-                                } catch (error: any) {
-                                  toast({
-                                    title: "Upload failed",
-                                    description: error?.message || "Failed to upload image",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload
-                            </Button>
-                          )}
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Preview Info */}
+                              <div className="space-y-2 pt-2 border-t">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Slots configured:</span>
+                                  <span className="font-semibold">{formData.flowDrawerSlotCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Images uploaded:</span>
+                                  <span className="font-semibold text-green-600">
+                                    {formData.flowDrawerSlots.filter(s => s.url || s.file).length} / {formData.flowDrawerSlotCount}
+                                  </span>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
                         </div>
                       </div>
                     </div>
