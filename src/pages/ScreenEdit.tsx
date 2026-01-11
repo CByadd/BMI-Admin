@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Upload, X, Loader2, CalendarIcon } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, CalendarIcon, Users, User, Music, DollarSign, Layers, Activity } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
@@ -45,6 +45,7 @@ const ScreenEdit = () => {
     flowDrawerEnabled: true,
     flowDrawerSlotCount: 2,
     flowDrawerSlots: [] as Array<{ url: string | null; file: File | null; preview: string | null }>,
+    hideScreenId: false,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -58,12 +59,18 @@ const ScreenEdit = () => {
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
   const [uploadingSlots, setUploadingSlots] = useState<Record<number, boolean>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
+  const [screenStats, setScreenStats] = useState<{
+    todayUsers: number;
+    totalUsers: number;
+  } | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   // Load playlists and current assignment when component mounts
   useEffect(() => {
     if (id) {
       loadPlaylists();
       loadCurrentPlaylist();
+      loadScreenStats();
     }
   }, [id]);
 
@@ -150,6 +157,7 @@ const ScreenEdit = () => {
           flowDrawerEnabled: player.flowDrawerEnabled !== undefined ? player.flowDrawerEnabled : true,
           flowDrawerSlotCount: slotCount,
           flowDrawerSlots: flowDrawerSlots,
+          hideScreenId: player.hideScreenId !== undefined ? player.hideScreenId : false,
         });
         // Load logo URL if exists
         if (player.logoUrl) {
@@ -174,6 +182,7 @@ const ScreenEdit = () => {
           flowDrawerEnabled: true,
           flowDrawerSlotCount: 2,
           flowDrawerSlots: [{ url: null, file: null, preview: null }, { url: null, file: null, preview: null }],
+          hideScreenId: false,
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -195,6 +204,7 @@ const ScreenEdit = () => {
         flowDrawerEnabled: true,
         flowDrawerSlotCount: 2,
         flowDrawerSlots: [{ url: null, file: null, preview: null }, { url: null, file: null, preview: null }],
+        hideScreenId: false,
       });
       setLogoUrl(null);
       setLogoPreview(null);
@@ -220,6 +230,25 @@ const ScreenEdit = () => {
       });
     } finally {
       setIsLoadingPlaylists(false);
+    }
+  };
+
+  const loadScreenStats = async () => {
+    if (!id) return;
+    
+    setIsLoadingStats(true);
+    try {
+      const response = await api.getScreenBMIRecords(id, 'all');
+      if (response.ok && response.stats) {
+        setScreenStats({
+          todayUsers: response.stats.todayUsers || 0,
+          totalUsers: response.stats.totalUsers || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading screen stats:", error);
+    } finally {
+      setIsLoadingStats(false);
     }
   };
 
@@ -387,6 +416,7 @@ const ScreenEdit = () => {
         paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
         flowDrawerEnabled: formData.flowDrawerEnabled,
         flowDrawerSlotCount: formData.flowDrawerSlotCount || 2, // Ensure we always send a value
+        hideScreenId: formData.hideScreenId,
       };
       
       console.log('DEBUG: Saving screen config with slot count:', formData.flowDrawerSlotCount);
@@ -483,6 +513,108 @@ const ScreenEdit = () => {
           </div>
         </div>
 
+        {/* Screen Info Card */}
+        {/* {!isLoadingData && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Screen Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                Today's Users
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Today's Users</p>
+                    <p className="text-2xl font-bold">
+                      {isLoadingStats ? <Skeleton className="h-7 w-12" /> : (screenStats?.todayUsers ?? 0)}
+                    </p>
+                  </div>
+                </div>
+
+                Total Users
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                    <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Total Users</p>
+                    <p className="text-2xl font-bold">
+                      {isLoadingStats ? <Skeleton className="h-7 w-12" /> : (screenStats?.totalUsers ?? 0)}
+                    </p>
+                  </div>
+                </div>
+
+                Assigned Playlist
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                    <Music className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Assigned Playlist</p>
+                    <p className="text-lg font-semibold">
+                      {formData.playlistId && formData.playlistId !== "none"
+                        ? playlists.find(p => p.id === formData.playlistId)?.name || "Loading..."
+                        : "None"}
+                    </p>
+                  </div>
+                </div>
+
+                Payment Amount
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Payment Amount</p>
+                    <p className="text-lg font-semibold">
+                      {formData.paymentAmount !== null && formData.paymentAmount !== undefined
+                        ? `₹${formData.paymentAmount.toFixed(2)}`
+                        : "Not Configured"}
+                    </p>
+                  </div>
+                </div>
+
+                Flow Drawer Status
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                    <Layers className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Flow Drawer</p>
+                    <p className="text-lg font-semibold">
+                      {formData.flowDrawerEnabled ? (
+                        <span className="text-green-600 dark:text-green-400">Enabled</span>
+                      ) : (
+                        <span className="text-gray-500">Disabled</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                Screen Status
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                    <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Screen Status</p>
+                    <p className="text-lg font-semibold">
+                      {formData.isActive ? (
+                        <span className="text-green-600 dark:text-green-400">Active</span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400">Inactive</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )} */}
+
         {isLoadingData ? (
           <Card>
             <CardContent className="p-6">
@@ -541,6 +673,8 @@ const ScreenEdit = () => {
                   </div>
                 </div>
 
+                
+
                 {/* Second row: Height Calibration and Payment Amount with Logo Upload */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2 space-y-4">
@@ -576,8 +710,11 @@ const ScreenEdit = () => {
                             checked={formData.heightCalibrationEnabled}
                             onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
                           />
+                          
                         </div>
+                        
                       </div>
+                      
                       <div className="space-y-2">
                         <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
                         <Input
@@ -600,6 +737,37 @@ const ScreenEdit = () => {
                         </p>
                       </div>
                     </div>
+
+                       {/* Hide Screen ID Toggle */}
+                <div className="flex items-center justify-between space-x-2 py-2 border-t">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="hideScreenId">Hide Screen ID</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Hide the screen ID display in the top-left corner
+                    </p>
+                  </div>
+                  <Switch
+                    id="hideScreenId"
+                    checked={formData.hideScreenId}
+                    onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
+                  />
+                </div>
+
+   {/* Enable Screen Toggle */}
+                <div className="flex items-center justify-between space-x-2 py-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="isActive">Enable Screen</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enable or disable this screen
+                    </p>
+                  </div>
+                  <Switch
+                    id="isActive"
+                    checked={formData.isActive}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  />
+                </div>
+
                   </div>
                   
                   {/* Logo Upload Section - Smaller, on the right */}
@@ -755,7 +923,7 @@ const ScreenEdit = () => {
                 </div>
                 
                 {/* Third row: Flow Type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="flowType">Flow Type</Label>
                     <Input
@@ -768,7 +936,7 @@ const ScreenEdit = () => {
                       Flow type is determined by the app version and cannot be changed here
                     </p>
                   </div>
-                </div>
+                </div> */}
                 
                 {/* Playlist Selection */}
                 <div className="space-y-2">
@@ -913,21 +1081,10 @@ const ScreenEdit = () => {
                   </div>
                 )}
                 
-                {/* Enable Screen Toggle */}
-                <div className="flex items-center justify-between space-x-2 py-2">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="isActive">Enable Screen</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enable or disable this screen
-                    </p>
-                  </div>
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  />
-                </div>
+             
                 
+             
+
                 {/* Flow Drawer Toggle */}
                 <div className="flex items-center justify-between space-x-2 py-2 border-t">
                   <div className="space-y-0.5">
@@ -996,7 +1153,7 @@ const ScreenEdit = () => {
                         {/* Upload Fields - Takes 2 columns */}
                         <div className="lg:col-span-2">
                           {/* Flexible responsive grid that adapts to slot count and screen size */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-fr">
+                          <div className="grid grid-cols-3 gap-4 auto-rows-fr">
                             {formData.flowDrawerSlots.map((slot, index) => {
                               const isUploading = uploadingSlots[index] || false;
                               const progress = uploadProgress[index] || 0;
@@ -1014,9 +1171,9 @@ const ScreenEdit = () => {
                                         <div className={`w-2 h-2 rounded-full ${hasImage ? 'bg-green-500' : 'bg-muted-foreground'}`} />
                                         <div className="flex flex-col">
                                           <Label className="text-sm font-medium">Slot {index + 1}</Label>
-                                          <span className="text-[10px] text-muted-foreground font-mono">
+                                          {/* <span className="text-[10px] text-muted-foreground font-mono">
                                             → flowDrawerImage{index + 1}Url
-                                          </span>
+                                          </span> */}
                                         </div>
                                       </div>
                                       {slot.url && !slot.file && !isUploading && (

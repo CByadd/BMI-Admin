@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Activity, ArrowLeft, Edit, MapPin, Monitor, Clock, Calendar, 
-  Download, Search, Users, TrendingUp, CheckCircle, ImageIcon, List, Loader2
+  Download, Search, Users, TrendingUp, CheckCircle, ImageIcon, List, Loader2, DollarSign
 } from "lucide-react";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,8 @@ interface UserLog {
   category: string;
   location: string;
   waterIntake: string | null;
+  paymentStatus?: boolean;
+  paymentAmount?: number | null;
 }
 
 interface ScreenData {
@@ -68,6 +70,7 @@ const ScreenDetails = () => {
     totalUsers: 0,
     avgBMI: 0
   });
+  const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -184,6 +187,9 @@ const ScreenDetails = () => {
           totalUsers: 0, // Will be updated from stats
           avgBMI: 0, // Will be updated from stats
         });
+        
+        // Store payment amount for displaying in user activity table
+        setPaymentAmount(player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null);
       }
     } catch (error) {
       console.error('Error fetching screen data:', error);
@@ -543,9 +549,32 @@ const ScreenDetails = () => {
       <Card className="p-4 sm:p-6">
           <div className="space-y-6">
             <div className="flex flex-col gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">User Activity Logs</h2>
-                <p className="text-sm text-muted-foreground">Complete measurement history for this screen</p>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">User Activity Logs</h2>
+                  <p className="text-sm text-muted-foreground">Complete measurement history for this screen</p>
+                </div>
+                {filteredLogs.length > 0 && (() => {
+                  const totalRevenue = filteredLogs
+                    .filter(log => log.paymentStatus && log.paymentAmount !== null && log.paymentAmount !== undefined)
+                    .reduce((sum, log) => sum + (log.paymentAmount || 0), 0);
+                  const paidCount = filteredLogs.filter(log => log.paymentStatus).length;
+                  
+                  if (totalRevenue > 0) {
+                    return (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Collected Revenue ({paidCount} {paidCount === 1 ? 'payment' : 'payments'})</p>
+                          <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                            ₹{totalRevenue.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -588,22 +617,42 @@ const ScreenDetails = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Weight (kg)</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Height (cm)</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">BMI</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Water Intake</th>
+                    {/* <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Water Intake</th> */}
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Amount Paid</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-accent/50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-foreground">{log.date}</td>
+                     <td className="px-4 py-3 text-sm text-foreground">
+  {new Date(log.date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  })}
+</td>
+
                       <td className="px-4 py-3 text-sm font-medium text-foreground">{log.userName}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{log.mobile}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{log.weight}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{log.height}</td>
                       <td className="px-4 py-3 text-sm font-medium text-foreground">{log.bmi}</td>
-                      <td className="px-4 py-3 text-sm text-foreground">{log.waterIntake || '-'}</td>
+                      {/* <td className="px-4 py-3 text-sm text-foreground">{log.waterIntake || '-'}</td> */}
                       <td className="px-4 py-3">
                         <Badge className={labelColors[log.category] || labelColors.Normal}>{log.category}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-foreground">
+                        {log.paymentStatus && log.paymentAmount !== null && log.paymentAmount !== undefined ? (
+                          `₹${log.paymentAmount.toFixed(2)}`
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </td>
                     </tr>
                   ))}

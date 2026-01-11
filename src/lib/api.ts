@@ -142,6 +142,7 @@ export const api = {
     logoUrl?: string | null;
     flowDrawerEnabled?: boolean;
     flowDrawerSlotCount?: number;
+    hideScreenId?: boolean;
   }) =>
     apiRequest('PUT', API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), config),
   uploadLogo: async (screenId: string, file: File) => {

@@ -48,6 +48,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     heightCalibration: null as number | null,
     heightCalibrationEnabled: true,
     paymentAmount: null as number | null,
+    hideScreenId: false,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -86,6 +87,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           heightCalibration: player.heightCalibration !== null && player.heightCalibration !== undefined ? player.heightCalibration : null,
           heightCalibrationEnabled: player.heightCalibrationEnabled !== undefined ? player.heightCalibrationEnabled : true,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
+          hideScreenId: player.hideScreenId !== undefined ? player.hideScreenId : false,
         });
         // Load logo URL if exists
         if (player.logoUrl) {
@@ -107,6 +109,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           heightCalibration: null,
           heightCalibrationEnabled: true,
           paymentAmount: null,
+          hideScreenId: false,
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -124,6 +127,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         isActive: screen.status !== "offline",
         heightCalibration: null,
         paymentAmount: null,
+        hideScreenId: false,
       });
       setLogoUrl(null);
       setLogoPreview(null);
@@ -297,6 +301,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
         heightCalibrationEnabled: formData.heightCalibrationEnabled,
         paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
+        hideScreenId: formData.hideScreenId,
       };
       
       // Always include playlist fields - send null to clear, or values to set
@@ -776,6 +781,20 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 id="isActive"
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between space-x-2 py-2 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="hideScreenId">Hide Screen ID</Label>
+                <p className="text-sm text-muted-foreground">
+                  Hide the screen ID display in the top-left corner
+                </p>
+              </div>
+              <Switch
+                id="hideScreenId"
+                checked={formData.hideScreenId}
+                onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
               />
             </div>
           </div>

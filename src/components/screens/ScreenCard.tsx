@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Monitor, MapPin, Clock, Eye, Edit, Trash2, Settings, ListVideo, CircleDollarSign, Music } from "lucide-react";
+import { Monitor, MapPin, Clock, Eye, Edit, Trash2, Settings, ListVideo, CircleDollarSign, Music, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ interface ScreenCardProps {
     flowType?: string | null;
     paymentAmount?: number | null;
     playlistId?: string | null;
+    flowDrawerEnabled?: boolean;
   };
   onEdit?: (updatedScreen: any) => void;
   onDelete?: (screenId: string) => void;
@@ -127,7 +128,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
         </div>
 
         {/* Flow Type Display */}
-        <div className="space-y-2 pt-2 border-t border-border">
+        {/* <div className="space-y-2 pt-2 border-t border-border">
           <Label className="text-xs text-muted-foreground flex items-center gap-1">
             <Settings className="w-3 h-3" />
             Flow Type
@@ -135,7 +136,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
           <div className="text-sm font-medium text-foreground">
             {screen.flowType || "Normal"}
           </div>
-        </div>
+        </div> */}
 
         {/* Configuration Details */}
         <div className="space-y-3 pt-2 border-t border-border">
@@ -168,10 +169,29 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
               )}
             </div>
           </div>
+
+          {/* Flow Drawer Status */}
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Layers className="w-3 h-3" />
+              Flow Drawer
+            </Label>
+            <div className="text-sm font-medium text-foreground">
+              {screen.flowDrawerEnabled !== false ? (
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  Enabled
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                  Disabled
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Stats */}
-        {screen.todayUsers !== undefined && (
+        {/* {screen.todayUsers !== undefined && (
           <div className="flex gap-4 pt-4 border-t border-border">
             <div className="flex-1">
               <p className="text-2xl font-bold text-foreground">{screen.todayUsers}</p>
@@ -182,7 +202,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
               <p className="text-xs text-muted-foreground">Total Users</p>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Actions */}
         <div className="flex gap-2">
