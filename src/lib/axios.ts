@@ -4,7 +4,8 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // const API_BASE_URL = 'https://bmi-server-eight.vercel.app';
-const API_BASE_URL = 'http://localhost:4000';
+// const API_BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = 'http://103.118.158.165';
 
 /**
  * Get auth token from localStorage

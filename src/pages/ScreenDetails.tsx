@@ -5,6 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Activity, ArrowLeft, Edit, MapPin, Monitor, Clock, Calendar, 
   Download, Search, Users, TrendingUp, CheckCircle, ImageIcon, List, Loader2, DollarSign
@@ -78,6 +87,17 @@ const ScreenDetails = () => {
     hasMore: true,
     loadingMore: false
   });
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFilters, setExportFilters] = useState({
+    registeredUsersOnly: false,
+    categories: {
+      Normal: true,
+      Overweight: true,
+      Obese: true,
+      Underweight: true,
+    }
+  });
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -236,7 +256,7 @@ const ScreenDetails = () => {
           hasPreviousPage: boolean;
         };
       };
-      
+      console.log('Fetched BMI records response:', response);
       if (response.ok) {
         const formattedLogs = response.records.map((record) => ({
           id: record.id,
@@ -246,10 +266,14 @@ const ScreenDetails = () => {
           weight: record.weight,
           height: record.height,
           bmi: record.bmi,
+          paymentAmount: record.paymentAmount,
+          paymentStatus: record.paymentStatus,
           category: record.category,
           location: record.location,
           waterIntake: record.waterIntake,
         }));
+
+        console.log('Formatted Logs:', formattedLogs);
         
         setUserLogs(prev => loadMore ? [...prev, ...formattedLogs] : formattedLogs);
         setStats(response.stats);
@@ -348,6 +372,120 @@ const ScreenDetails = () => {
     log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.mobile.includes(searchQuery)
   );
+
+  const exportToCSV = () => {
+    try {
+      setExporting(true);
+      
+      // Apply filters to logs
+      let exportData = filteredLogs;
+      
+      // Filter out anonymous users if requested
+      if (exportFilters.registeredUsersOnly) {
+        exportData = exportData.filter(log => log.userName !== 'Anonymous' && log.userName !== '-');
+      }
+      
+      // Filter by BMI categories
+      const selectedCategories = Object.entries(exportFilters.categories)
+        .filter(([_, selected]) => selected)
+        .map(([category, _]) => category);
+      
+      if (selectedCategories.length > 0) {
+        exportData = exportData.filter(log => selectedCategories.includes(log.category));
+      }
+      
+      if (exportData.length === 0) {
+        toast({
+          title: "No data to export",
+          description: "No records match the selected filters",
+          variant: "destructive",
+        });
+        setExportDialogOpen(false);
+        return;
+      }
+      
+      // Prepare CSV headers
+      const headers = [
+        'Date & Time',
+        'User Name',
+        'Mobile',
+        'Weight (kg)',
+        'Height (cm)',
+        'BMI',
+        'Category',
+        'Amount Paid',
+        'Location'
+      ];
+      
+      // Prepare CSV rows
+      const rows = exportData.map((log) => {
+        const dateTime = new Date(log.date).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true
+        });
+        
+        return [
+          dateTime,
+          log.userName,
+          log.mobile,
+          log.weight.toString(),
+          log.height.toString(),
+          log.bmi.toString(),
+          log.category,
+          log.paymentStatus && log.paymentAmount !== null && log.paymentAmount !== undefined 
+            ? `₹${log.paymentAmount.toFixed(2)}` 
+            : '-',
+          log.location || '-'
+        ];
+      });
+      
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with screen ID and current date
+      const date = new Date().toISOString().split('T')[0];
+      const screenId = id || 'screen';
+      const filterSuffix = exportFilters.registeredUsersOnly ? '_registered' : '';
+      const filename = `${screenId}_export_${date}${filterSuffix}.csv`;
+      
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Export successful",
+        description: `Exported ${exportData.length} records to ${filename}`,
+      });
+      
+      setExportDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error exporting to CSV:', error);
+      toast({
+        title: "Export failed",
+        description: error.message || "Failed to export data",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -563,9 +701,9 @@ const ScreenDetails = () => {
                   if (totalRevenue > 0) {
                     return (
                       <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                        <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      
                         <div>
-                          <p className="text-xs text-muted-foreground">Total Collected Revenue ({paidCount} {paidCount === 1 ? 'payment' : 'payments'})</p>
+                          <p className="text-xs text-muted-foreground">Total Collected Revenue </p>
                           <p className="text-xl font-bold text-green-600 dark:text-green-400">
                             ₹{totalRevenue.toFixed(2)}
                           </p>
@@ -589,7 +727,12 @@ const ScreenDetails = () => {
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full sm:w-auto"
+                  onClick={() => setExportDialogOpen(true)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">Export CSV</span>
                   <span className="sm:hidden">Export</span>
@@ -682,6 +825,103 @@ const ScreenDetails = () => {
           </div>
         </Card>
       </main>
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Export Options</DialogTitle>
+            <DialogDescription>
+              Choose filters for exporting user activity data
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Registered Users Only Filter */}
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="registered-users-only"
+                checked={exportFilters.registeredUsersOnly}
+                onCheckedChange={(checked) =>
+                  setExportFilters(prev => ({
+                    ...prev,
+                    registeredUsersOnly: checked === true
+                  }))
+                }
+              />
+              <div className="space-y-1 leading-none">
+                <label
+                  htmlFor="registered-users-only"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Registered Users Only
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  Exclude anonymous users from the export
+                </p>
+              </div>
+            </div>
+
+            {/* BMI Category Filters */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">BMI Categories</label>
+              <div className="space-y-3">
+                {['Normal', 'Overweight', 'Obese', 'Underweight'].map((category) => (
+                  <div key={category} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`category-${category}`}
+                      checked={exportFilters.categories[category as keyof typeof exportFilters.categories]}
+                      onCheckedChange={(checked) =>
+                        setExportFilters(prev => ({
+                          ...prev,
+                          categories: {
+                            ...prev.categories,
+                            [category]: checked === true
+                          }
+                        }))
+                      }
+                    />
+                    <label
+                      htmlFor={`category-${category}`}
+                      className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+                    >
+                      <Badge className={labelColors[category] || labelColors.Normal}>
+                        {category}
+                      </Badge>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setExportDialogOpen(false)}
+              disabled={exporting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={exportToCSV}
+              disabled={exporting || Object.values(exportFilters.categories).every(v => !v)}
+            >
+              {exporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
