@@ -101,7 +101,7 @@ async function apiRequest<T>(
         response = await axiosInstance.put<T>(endpoint, data, config);
         break;
       case 'DELETE':
-        response = await axiosInstance.delete<T>(endpoint, config);
+        response = await axiosInstance.delete<T>(endpoint, { ...config, data });
         break;
     }
     

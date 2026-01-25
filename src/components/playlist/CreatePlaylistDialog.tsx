@@ -138,7 +138,7 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
           </div>
 
           {/* Description */}
-          <div className="space-y-3">
+          {/* <div className="space-y-3">
             <Label htmlFor="description" className="text-base font-semibold">
               Description <span className="text-muted-foreground font-normal">(Optional)</span>
             </Label>
@@ -154,7 +154,7 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
             <p className="text-xs text-muted-foreground">
               Add context about when and where this playlist will be used.
             </p>
-          </div>
+          </div> */}
 
           {/* Tags */}
           {/* <div className="space-y-3">
