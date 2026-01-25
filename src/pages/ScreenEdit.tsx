@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Upload, X, Loader2, CalendarIcon, Users, User, Music, DollarSign, Layers, Activity } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -265,11 +266,11 @@ const ScreenEdit = () => {
         return;
       }
       
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (1.3 MB max per file)
+      if (file.size > 1.3 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Logo file must be less than 5MB",
+          description: "Logo file must be less than 1.3 MB",
           variant: "destructive",
         });
         return;
@@ -406,14 +407,15 @@ const ScreenEdit = () => {
       // Include playlistId and date range in the update
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
       
-      // Prepare date values - always send them (null if not set)
+      const isF2 = (screen?.flowType ?? "").toString().toLowerCase() === "f2";
+      // Prepare date values - always send them (null if not set). Omit paymentAmount for F2 (not used).
       const configPayload: any = {
         deviceName: formData.name,
         location: formData.location,
         isActive: formData.isActive,
         heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
         heightCalibrationEnabled: formData.heightCalibrationEnabled,
-        paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
+        ...(isF2 ? {} : { paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null }),
         flowDrawerEnabled: formData.flowDrawerEnabled,
         flowDrawerSlotCount: formData.flowDrawerSlotCount || 2, // Ensure we always send a value
         hideScreenId: formData.hideScreenId,
@@ -507,9 +509,16 @@ const ScreenEdit = () => {
           <Button variant="outline" size="icon" onClick={() => navigate("/screens")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Edit Screen</h1>
-            <p className="text-sm text-muted-foreground">Screen ID: {id}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold">Edit Screen</h1>
+              <p className="text-sm text-muted-foreground">Screen ID: {id}</p>
+            </div>
+            {(screen?.flowType ?? "").toString().toLowerCase() === "f2" && (
+              <Badge variant="secondary" className="text-sm px-3 py-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                F2 App
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -675,10 +684,10 @@ const ScreenEdit = () => {
 
                 
 
-                {/* Second row: Height Calibration and Payment Amount with Logo Upload */}
+                {/* Second row: Height Calibration and Payment Amount with Logo Upload (Payment hidden for F2) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={cn("grid gap-4", (screen?.flowType ?? "").toString().toLowerCase() === "f2" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
                       <div className="space-y-2">
                         <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
                         <Input
@@ -715,6 +724,7 @@ const ScreenEdit = () => {
                         
                       </div>
                       
+                      {(screen?.flowType ?? "").toString().toLowerCase() !== "f2" && (
                       <div className="space-y-2">
                         <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
                         <Input
@@ -736,6 +746,7 @@ const ScreenEdit = () => {
                           Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
                         </p>
                       </div>
+                      )}
                     </div>
 
                        {/* Hide Screen ID Toggle */}
@@ -878,11 +889,11 @@ const ScreenEdit = () => {
                                 return;
                               }
                               
-                              // Validate file size (5MB max)
-                              if (file.size > 5 * 1024 * 1024) {
+                              // Validate file size (1.3 MB max per file)
+                              if (file.size > 1.3 * 1024 * 1024) {
                                 toast({
                                   title: "File too large",
-                                  description: `Logo must be less than 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                                  description: `Logo must be less than 1.3 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
                                   variant: "destructive",
                                 });
                                 e.target.value = '';
@@ -913,7 +924,7 @@ const ScreenEdit = () => {
                             ) : logoUrl ? (
                               <span className="text-green-600">Uploaded</span>
                             ) : (
-                              <span>Max 5MB</span>
+                              <span>Max 1.3 MB</span>
                             )}
                           </p>
                         </div>
@@ -1312,11 +1323,11 @@ const ScreenEdit = () => {
                                     return;
                                   }
                                           
-                                          // Validate file size (5MB max)
-                                  if (file.size > 5 * 1024 * 1024) {
+                                          // Validate file size (1.3 MB max per file)
+                                  if (file.size > 1.3 * 1024 * 1024) {
                                     toast({
                                       title: "File too large",
-                                              description: `Image must be less than 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                                              description: `Image must be less than 1.3 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
                                       variant: "destructive",
                                     });
                                             e.target.value = ''; // Reset input
@@ -1438,7 +1449,7 @@ const ScreenEdit = () => {
                                         ) : slot.url ? (
                                           <span className="text-green-600">Image uploaded</span>
                                         ) : (
-                                          <span>Max size: 5MB • PNG, JPG, GIF</span>
+                                          <span>Max size: 1.3 MB • PNG, JPG, GIF</span>
                                         )}
                                       </p>
                                     </div>

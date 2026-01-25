@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,11 +170,11 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         return;
       }
       
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (1.3 MB max per file)
+      if (file.size > 1.3 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Logo file must be less than 5MB",
+          description: "Logo file must be less than 1.3 MB",
           variant: "destructive",
         });
         return;
@@ -293,14 +294,15 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
       // Include playlistId and date range in the update
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
       
-      // Prepare date values - always send them (null if not set)
+      const isF2 = (screen.flowType ?? "").toString().toLowerCase() === "f2";
+      // Omit paymentAmount for F2 (not used)
       const configPayload: any = {
         deviceName: formData.name,
         location: formData.location,
         isActive: formData.isActive,
         heightCalibration: formData.heightCalibration !== null && formData.heightCalibration !== undefined ? formData.heightCalibration : 0,
         heightCalibrationEnabled: formData.heightCalibrationEnabled,
-        paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null,
+        ...(isF2 ? {} : { paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null }),
         hideScreenId: formData.hideScreenId,
       };
       
@@ -378,7 +380,14 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[90vw] max-w-[95vw] w-full h-[90dvh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Edit Screen - {screen.id}</DialogTitle>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DialogTitle className="mb-0">Edit Screen - {screen.id}</DialogTitle>
+            {(screen.flowType ?? "").toString().toLowerCase() === "f2" && (
+              <Badge variant="secondary" className="text-sm px-2 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                F2 App
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
         {isLoadingData ? (
           <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto flex-1">
@@ -474,8 +483,8 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
               </div>
             </div>
 
-            {/* Second row: Height Calibration and Payment Amount */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Second row: Height Calibration and Payment Amount (Payment hidden for F2) */}
+            <div className={`grid gap-4 ${(screen.flowType ?? "").toString().toLowerCase() === "f2" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
               <div className="space-y-2">
                 <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
                 <Input
@@ -509,6 +518,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                   />
                 </div>
               </div>
+              {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
               <div className="space-y-2">
                 <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
                 <Input
@@ -530,6 +540,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                   Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
                 </p>
               </div>
+              )}
             </div>
 
             {/* Logo Upload Section */}
@@ -609,7 +620,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Upload a logo image for this screen. The logo will be displayed at the top of modals in the Android app. Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.
+                  Upload a logo image for this screen. The logo will be displayed at the top of modals in the Android app. Maximum file size: 1.3 MB. Supported formats: JPG, PNG, GIF.
                 </p>
               </div>
             </div>

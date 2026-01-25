@@ -30,23 +30,55 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     }
   };
 
+  const MAX_FILE_SIZE = 1.3 * 1024 * 1024; // 1.3 MB per file (single or multiple)
+
+  const checkFileSize = (file: File): { ok: boolean; message?: string } => {
+    if (file.size > MAX_FILE_SIZE) {
+      const mb = (file.size / (1024 * 1024)).toFixed(2);
+      return { ok: false, message: `${file.name} is too large (${mb} MB). Each file must be less than 1.3 MB.` };
+    }
+    return { ok: true };
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files).filter(file => 
-        file.type.startsWith('image/') || file.type.startsWith('video/')
+      const allowed = Array.from(e.dataTransfer.files).filter(
+        (file) => file.type.startsWith("image/") || file.type.startsWith("video/")
       );
-      setFiles(prev => [...prev, ...newFiles]);
+      const valid: File[] = [];
+      for (const file of allowed) {
+        const { ok, message } = checkFileSize(file);
+        if (ok) valid.push(file);
+        else
+          toast({
+            title: "Asset too large",
+            description: message,
+            variant: "destructive",
+          });
+      }
+      if (valid.length) setFiles((prev) => [...prev, ...valid]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
+      const valid: File[] = [];
+      for (const file of newFiles) {
+        const { ok, message } = checkFileSize(file);
+        if (ok) valid.push(file);
+        else
+          toast({
+            title: "Asset too large",
+            description: message,
+            variant: "destructive",
+          });
+      }
+      if (valid.length) setFiles((prev) => [...prev, ...valid]);
     }
   };
 
@@ -56,20 +88,9 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
 
   const validateFiles = () => {
     for (const file of files) {
-      if (file.type.startsWith('image/') && file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: `${file.name} exceeds the 5MB limit for images.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      if (file.type.startsWith('video/') && file.size > 100 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: `${file.name} exceeds the 100MB limit for videos.`,
-          variant: "destructive",
-        });
+      const { ok, message } = checkFileSize(file);
+      if (!ok) {
+        toast({ title: "Asset too large", description: message, variant: "destructive" });
         return false;
       }
     }
@@ -175,7 +196,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                 Drag & drop files here, or click to browse
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                Supported: JPG, PNG, MP4, MOV (Images up to 5MB, Videos up to 100MB)
+                Supported: JPG, PNG, MP4, MOV. Each file must be less than 1.3 MB.
               </p>
               <input
                 type="file"

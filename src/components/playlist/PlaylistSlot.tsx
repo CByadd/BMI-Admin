@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, FileVideo, FileImage, Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface SlotMedia {
   id: string;
@@ -22,6 +23,8 @@ interface PlaylistSlotProps {
   onDurationChange: (slotNumber: number, duration: number) => void;
 }
 
+const MAX_FILE_SIZE = 1.3 * 1024 * 1024; // 1.3 MB per file
+
 export const PlaylistSlot = ({
   slotNumber,
   media,
@@ -30,6 +33,20 @@ export const PlaylistSlot = ({
   onDurationChange,
 }: PlaylistSlotProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const { toast } = useToast();
+
+  const checkAssetSize = (file: File): boolean => {
+    if (file.size > MAX_FILE_SIZE) {
+      const mb = (file.size / (1024 * 1024)).toFixed(2);
+      toast({
+        title: "Asset too large",
+        description: `${file.name} is too large (${mb} MB). Each file must be less than 1.3 MB.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -57,6 +74,7 @@ export const PlaylistSlot = ({
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         const file = files[0];
+        if (!checkAssetSize(file)) return;
         const mockMedia: SlotMedia = {
           id: `media-${Date.now()}`,
           name: file.name,
@@ -75,6 +93,7 @@ export const PlaylistSlot = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!checkAssetSize(file)) return;
       const mockMedia: SlotMedia = {
         id: `media-${Date.now()}`,
         name: file.name,

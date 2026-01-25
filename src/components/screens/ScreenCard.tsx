@@ -103,10 +103,17 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
               <p className="text-sm text-muted-foreground">{screen.id}</p>
             </div>
           </div>
-          <Badge className={config.color}>
-            <div className={`w-2 h-2 rounded-full ${config.dotColor} mr-2`} />
-            {config.label}
-          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(screen.flowType ?? "").toString().toLowerCase() === "f2" && (
+              <Badge variant="secondary" className="text-xs px-2 py-0 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                F2
+              </Badge>
+            )}
+            <Badge className={config.color}>
+              <div className={`w-2 h-2 rounded-full ${config.dotColor} mr-2`} />
+              {config.label}
+            </Badge>
+          </div>
         </div>
 
         {/* Details */}
@@ -140,8 +147,8 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
 
         {/* Configuration Details */}
         <div className="space-y-3 pt-2 border-t border-border">
-          {/* Payment Amount */}
-          {screen.paymentAmount !== null && screen.paymentAmount !== undefined && (
+          {/* Payment Amount (hidden for F2 - not used) */}
+          {screen.paymentAmount !== null && screen.paymentAmount !== undefined && (screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
             <div className="flex items-center justify-between">
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
                 <CircleDollarSign className="w-3 h-3" />
