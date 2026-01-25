@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,8 @@ interface SlotMedia {
 const PlaylistEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const createdPlaylistName = (location.state as { createdPlaylistName?: string } | null)?.createdPlaylistName;
   const [slots, setSlots] = useState<(SlotMedia | null)[]>(Array(8).fill(null));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,6 +75,7 @@ const PlaylistEditor = () => {
 
   useEffect(() => {
     if (id && id !== "new") {
+      if (createdPlaylistName) setPlaylistName(createdPlaylistName);
       loadPlaylist();
     } else {
       setLoading(false);
@@ -85,8 +88,11 @@ const PlaylistEditor = () => {
       setLoading(true);
       const response = await api.getPlaylist(id!) as { ok: boolean; playlist: any };
       if (response.ok && response.playlist) {
-        setPlaylistName(response.playlist.name);
+        const name = response.playlist.name || createdPlaylistName || "";
+        setPlaylistName(name);
         setSlots(response.playlist.slots || Array(8).fill(null));
+      } else if (createdPlaylistName) {
+        setPlaylistName(createdPlaylistName);
       }
     } catch (error) {
       console.error('Error loading playlist:', error);

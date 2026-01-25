@@ -59,8 +59,10 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
           onSuccess();
         }
         
-        // Navigate to editor with the actual playlist ID
-        navigate(`/playlists/${response.playlist.id}/edit`);
+        // Navigate to editor with the actual playlist ID and name so it's not asked again
+        navigate(`/playlists/${response.playlist.id}/edit`, {
+          state: { createdPlaylistName: name.trim() },
+        });
       } else {
         throw new Error("Failed to create playlist");
       }
@@ -76,17 +78,21 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
     }
   };
 
-  const handleClose = () => {
-    if (!creating) {
-      setName("");
-      setDescription("");
-      setTags("");
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      if (!creating) {
+        setName("");
+        setDescription("");
+        setTags("");
+      }
       onOpenChange(false);
+    } else {
+      onOpenChange(true);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] p-0 gap-0 overflow-hidden">
         {/* Modern Header with Gradient */}
         <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 sm:p-8 border-b border-border/50">
@@ -174,14 +180,16 @@ export const CreatePlaylistDialog = ({ open, onOpenChange, onSuccess }: CreatePl
         <DialogFooter className="p-6 sm:p-8 border-t border-border/50 bg-muted/30">
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:ml-auto">
             <Button
+              type="button"
               variant="outline"
-              onClick={handleClose}
+              onClick={() => handleOpenChange(false)}
               disabled={creating}
               className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
+              type="button"
               onClick={handleCreate}
               disabled={!name.trim() || creating}
               className="w-full sm:w-auto bg-primary hover:bg-primary/90"
