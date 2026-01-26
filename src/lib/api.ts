@@ -143,6 +143,9 @@ export const api = {
     flowDrawerEnabled?: boolean;
     flowDrawerSlotCount?: number;
     hideScreenId?: boolean;
+    smsEnabled?: boolean;
+    smsLimitPerScreen?: number | null;
+    resetSmsCount?: boolean;
   }) =>
     apiRequest('PUT', API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), config),
   uploadLogo: async (screenId: string, file: File) => {

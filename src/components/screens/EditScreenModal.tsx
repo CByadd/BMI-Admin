@@ -50,6 +50,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     heightCalibrationEnabled: true,
     paymentAmount: null as number | null,
     hideScreenId: false,
+    smsEnabled: false,
+    smsLimitPerScreen: null as number | null,
+    smsSentCount: 0,
   });
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -89,6 +92,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           heightCalibrationEnabled: player.heightCalibrationEnabled !== undefined ? player.heightCalibrationEnabled : true,
           paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
           hideScreenId: player.hideScreenId !== undefined ? player.hideScreenId : false,
+          smsEnabled: (player as any).smsEnabled === true,
+          smsLimitPerScreen: (player as any).smsLimitPerScreen != null ? Number((player as any).smsLimitPerScreen) : null,
+          smsSentCount: (player as any).smsSentCount != null ? Number((player as any).smsSentCount) : 0,
         });
         // Load logo URL if exists
         if (player.logoUrl) {
@@ -111,6 +117,9 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           heightCalibrationEnabled: true,
           paymentAmount: null,
           hideScreenId: false,
+          smsEnabled: false,
+          smsLimitPerScreen: null,
+          smsSentCount: 0,
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -127,8 +136,12 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         playlistEndDate: null,
         isActive: screen.status !== "offline",
         heightCalibration: null,
+        heightCalibrationEnabled: true,
         paymentAmount: null,
         hideScreenId: false,
+        smsEnabled: false,
+        smsLimitPerScreen: null,
+        smsSentCount: 0,
       });
       setLogoUrl(null);
       setLogoPreview(null);
@@ -295,7 +308,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
       
       const isF2 = (screen.flowType ?? "").toString().toLowerCase() === "f2";
-      // Omit paymentAmount for F2 (not used)
+      // Omit paymentAmount for F2 (not used); include SMS settings for all screens
       const configPayload: any = {
         deviceName: formData.name,
         location: formData.location,
@@ -304,6 +317,8 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         heightCalibrationEnabled: formData.heightCalibrationEnabled,
         ...(isF2 ? {} : { paymentAmount: formData.paymentAmount !== null && formData.paymentAmount !== undefined ? formData.paymentAmount : null }),
         hideScreenId: formData.hideScreenId,
+        smsEnabled: formData.smsEnabled,
+        smsLimitPerScreen: formData.smsLimitPerScreen !== null && formData.smsLimitPerScreen !== undefined ? formData.smsLimitPerScreen : null,
       };
       
       // Always include playlist fields - send null to clear, or values to set
@@ -808,6 +823,86 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
               />
             </div>
+
+            {/* SMS after payment (for screens with payment flow) */}
+            {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
+              <div className="space-y-4 pt-4 border-t border-border">
+                <Label className="text-sm font-medium">SMS after payment</Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, an SMS is sent to the user&apos;s mobile number after they complete payment. Use the limit to cap how many SMS can be sent for this screen.
+                </p>
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="smsEnabled">Send SMS after payment</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enable or disable SMS for this screen
+                    </p>
+                  </div>
+                  <Switch
+                    id="smsEnabled"
+                    checked={formData.smsEnabled}
+                    onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
+                  />
+                </div>
+                {formData.smsEnabled && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
+                      <Input
+                        id="smsLimitPerScreen"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={formData.smsLimitPerScreen ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFormData({
+                            ...formData,
+                            smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
+                          });
+                        }}
+                        placeholder="No limit"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty for no limit. Once this count is reached, no more SMS will be sent for this screen until reset.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <span className="text-sm text-muted-foreground">
+                        SMS sent (this screen): <strong>{formData.smsSentCount}</strong>
+                        {formData.smsLimitPerScreen != null && (
+                          <span className="ml-1">/ {formData.smsLimitPerScreen}</span>
+                        )}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const r = await api.updateScreenConfig(screen.id, { resetSmsCount: true });
+                            if (r && (r as any).ok !== false) {
+                              setFormData((f) => ({ ...f, smsSentCount: 0 }));
+                              toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
+                              await refreshScreens();
+                              loadCurrentPlaylist();
+                            } else throw new Error((r as any)?.error || "Reset failed");
+                          } catch (err: any) {
+                            toast({
+                              title: "Reset failed",
+                              description: err?.message || "Could not reset SMS count",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Reset SMS count
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter className="flex-shrink-0">
             <Button 
