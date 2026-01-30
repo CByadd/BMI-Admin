@@ -72,6 +72,7 @@ export const API_ENDPOINTS = {
     ASSIGN_SCREENS: (id: string) => `/api/auth/admin/${id}/assign-screens`,
     GET_ADMIN_SCREENS: (id: string) => `/api/auth/admin/${id}/screens`,
     SET_ADMIN_SCREEN_LIMITS: (id: string) => `/api/auth/admin/${id}/screen-limits`,
+    RESET_ADMIN_USAGE: (id: string) => `/api/auth/admin/${id}/reset-usage`,
   },
 };
 
@@ -285,6 +286,8 @@ export const api = {
   getAdminScreens: (id: string) => apiRequest('GET', API_ENDPOINTS.AUTH.GET_ADMIN_SCREENS(id)),
   setAdminScreenLimits: (id: string, screenLimits: { screenId: string; messageLimit?: number | null; whatsappLimit?: number | null }[]) =>
     apiRequest('PUT', API_ENDPOINTS.AUTH.SET_ADMIN_SCREEN_LIMITS(id), { screenLimits }),
+  resetAdminUsage: (id: string, options: { resetSmsUsage?: boolean; resetWhatsAppUsage?: boolean; resetSmsLimit?: boolean; resetWhatsAppLimit?: boolean }) =>
+    apiRequest('POST', API_ENDPOINTS.AUTH.RESET_ADMIN_USAGE(id), options),
 };
 
 export default api;

@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, X, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,8 @@ interface Admin {
   isActive: boolean;
   totalMessageLimit?: number | null;
   totalWhatsAppLimit?: number | null;
+  smsUsedCount?: number;
+  whatsappUsedCount?: number;
   assignedScreenIds?: string[];
   screenLimits?: { screenId: string; messageLimit: number | null; whatsappLimit?: number | null }[];
   createdAt: string;
@@ -54,6 +56,15 @@ const AdminManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [adminToReset, setAdminToReset] = useState<Admin | null>(null);
+  const [resetOptions, setResetOptions] = useState({
+    resetSmsUsage: false,
+    resetWhatsAppUsage: false,
+    resetSmsLimit: false,
+    resetWhatsAppLimit: false,
+  });
+  const [isResetting, setIsResetting] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -236,6 +247,48 @@ const AdminManagement = () => {
     }
   };
 
+  const handleResetUsage = (admin: Admin) => {
+    setAdminToReset(admin);
+    setResetOptions({
+      resetSmsUsage: false,
+      resetWhatsAppUsage: false,
+      resetSmsLimit: false,
+      resetWhatsAppLimit: false,
+    });
+    setIsResetDialogOpen(true);
+  };
+
+  const handleResetSubmit = async () => {
+    if (!adminToReset) return;
+    if (!resetOptions.resetSmsUsage && !resetOptions.resetWhatsAppUsage && !resetOptions.resetSmsLimit && !resetOptions.resetWhatsAppLimit) {
+      toast({
+        title: "No selection",
+        description: "Please select at least one option to reset",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsResetting(true);
+    try {
+      await api.resetAdminUsage(adminToReset.id, resetOptions);
+      toast({
+        title: "Success",
+        description: "Admin usage and limits reset successfully",
+      });
+      setIsResetDialogOpen(false);
+      setAdminToReset(null);
+      fetchAdmins();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const toggleScreen = (screenId: string) => {
     setFormData((prev) => {
       const newScreenIds = prev.screenIds.includes(screenId)
@@ -323,7 +376,9 @@ const AdminManagement = () => {
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>SMS limit</TableHead>
+                <TableHead>SMS used</TableHead>
                 <TableHead>WhatsApp limit</TableHead>
+                <TableHead>WhatsApp used</TableHead>
                 <TableHead>Assigned Screens</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -332,7 +387,7 @@ const AdminManagement = () => {
             <TableBody>
               {                admins.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     No admins found
                   </TableCell>
                 </TableRow>
@@ -355,7 +410,24 @@ const AdminManagement = () => {
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalMessageLimit != null ? (
-                        <span>{admin.totalMessageLimit}</span>
+                        <div className="flex items-center gap-1">
+                          <span>{admin.totalMessageLimit}</span>
+                          {admin.smsUsedCount != null && admin.totalMessageLimit != null && admin.smsUsedCount >= admin.totalMessageLimit && (
+                            <Badge variant="destructive" className="text-xs">⚠️</Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {admin.role === "super_admin" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : admin.totalMessageLimit != null ? (
+                        <span className={admin.smsUsedCount != null && admin.totalMessageLimit != null && admin.smsUsedCount >= admin.totalMessageLimit ? "text-destructive font-semibold" : ""}>
+                          {admin.smsUsedCount ?? 0}
+                          {admin.totalMessageLimit != null && ` / ${admin.totalMessageLimit}`}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -364,7 +436,24 @@ const AdminManagement = () => {
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalWhatsAppLimit != null ? (
-                        <span>{admin.totalWhatsAppLimit}</span>
+                        <div className="flex items-center gap-1">
+                          <span>{admin.totalWhatsAppLimit}</span>
+                          {admin.whatsappUsedCount != null && admin.totalWhatsAppLimit != null && admin.whatsappUsedCount >= admin.totalWhatsAppLimit && (
+                            <Badge variant="destructive" className="text-xs">⚠️</Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {admin.role === "super_admin" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : admin.totalWhatsAppLimit != null ? (
+                        <span className={admin.whatsappUsedCount != null && admin.totalWhatsAppLimit != null && admin.whatsappUsedCount >= admin.totalWhatsAppLimit ? "text-destructive font-semibold" : ""}>
+                          {admin.whatsappUsedCount ?? 0}
+                          {admin.totalWhatsAppLimit != null && ` / ${admin.totalWhatsAppLimit}`}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -388,6 +477,16 @@ const AdminManagement = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {admin.id !== user?.id && admin.role === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResetUsage(admin)}
+                            title="Reset usage and limits"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        )}
                         {admin.id !== user?.id && (
                           <Button
                             variant="ghost"
@@ -601,6 +700,103 @@ const AdminManagement = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Usage & Limits</DialogTitle>
+            <DialogDescription>
+              Reset usage counts and/or limits for {adminToReset?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="resetSmsUsage"
+                  checked={resetOptions.resetSmsUsage}
+                  onCheckedChange={(checked) =>
+                    setResetOptions({ ...resetOptions, resetSmsUsage: checked === true })
+                  }
+                />
+                <Label htmlFor="resetSmsUsage" className="cursor-pointer">
+                  Reset SMS usage count (set to 0)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="resetWhatsAppUsage"
+                  checked={resetOptions.resetWhatsAppUsage}
+                  onCheckedChange={(checked) =>
+                    setResetOptions({ ...resetOptions, resetWhatsAppUsage: checked === true })
+                  }
+                />
+                <Label htmlFor="resetWhatsAppUsage" className="cursor-pointer">
+                  Reset WhatsApp usage count (set to 0)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="resetSmsLimit"
+                  checked={resetOptions.resetSmsLimit}
+                  onCheckedChange={(checked) =>
+                    setResetOptions({ ...resetOptions, resetSmsLimit: checked === true })
+                  }
+                />
+                <Label htmlFor="resetSmsLimit" className="cursor-pointer">
+                  Clear SMS limit (set to null)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="resetWhatsAppLimit"
+                  checked={resetOptions.resetWhatsAppLimit}
+                  onCheckedChange={(checked) =>
+                    setResetOptions({ ...resetOptions, resetWhatsAppLimit: checked === true })
+                  }
+                />
+                <Label htmlFor="resetWhatsAppLimit" className="cursor-pointer">
+                  Clear WhatsApp limit (set to null)
+                </Label>
+              </div>
+            </div>
+            {adminToReset && (
+              <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
+                <p>
+                  Current: SMS {adminToReset.smsUsedCount ?? 0}
+                  {adminToReset.totalMessageLimit != null && ` / ${adminToReset.totalMessageLimit}`}
+                  {adminToReset.totalMessageLimit != null && adminToReset.smsUsedCount != null && adminToReset.smsUsedCount >= adminToReset.totalMessageLimit && (
+                    <span className="text-destructive ml-2">⚠️ Limit reached</span>
+                  )}
+                </p>
+                <p>
+                  Current: WhatsApp {adminToReset.whatsappUsedCount ?? 0}
+                  {adminToReset.totalWhatsAppLimit != null && ` / ${adminToReset.totalWhatsAppLimit}`}
+                  {adminToReset.totalWhatsAppLimit != null && adminToReset.whatsappUsedCount != null && adminToReset.whatsappUsedCount >= adminToReset.totalWhatsAppLimit && (
+                    <span className="text-destructive ml-2">⚠️ Limit reached</span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsResetDialogOpen(false);
+                setAdminToReset(null);
+              }}
+              disabled={isResetting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleResetSubmit} disabled={isResetting}>
+              {isResetting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Reset
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

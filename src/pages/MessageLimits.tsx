@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare, AlertTriangle } from "lucide-react";
 
 interface ScreenLimit {
   screenId: string;
@@ -25,6 +26,8 @@ const MessageLimits = () => {
   const { toast } = useToast();
   const [totalLimit, setTotalLimit] = useState<number | null>(null);
   const [totalWhatsAppLimit, setTotalWhatsAppLimit] = useState<number | null>(null);
+  const [smsUsedCount, setSmsUsedCount] = useState<number>(0);
+  const [whatsappUsedCount, setWhatsAppUsedCount] = useState<number>(0);
   const [screenLimits, setScreenLimits] = useState<ScreenLimit[]>([]);
   const [screens, setScreens] = useState<ScreenInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,9 +47,11 @@ const MessageLimits = () => {
         api.getCurrentUser(),
         api.getAdminScreens(user.id),
       ]);
-      const me = (meRes as { user?: { totalMessageLimit?: number | null; totalWhatsAppLimit?: number | null } }).user;
+      const me = (meRes as { user?: { totalMessageLimit?: number | null; totalWhatsAppLimit?: number | null; smsUsedCount?: number; whatsappUsedCount?: number } }).user;
       setTotalLimit(me?.totalMessageLimit ?? null);
       setTotalWhatsAppLimit(me?.totalWhatsAppLimit ?? null);
+      setSmsUsedCount(me?.smsUsedCount ?? 0);
+      setWhatsAppUsedCount(me?.whatsappUsedCount ?? 0);
       const screensList = (screensRes as { screens?: ScreenLimit[] }).screens ?? [];
       setScreenLimits(screensList);
 
@@ -165,6 +170,9 @@ const MessageLimits = () => {
     );
   }
 
+  const smsLimitReached = totalLimit != null && totalLimit > 0 && smsUsedCount >= totalLimit;
+  const whatsappLimitReached = totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && whatsappUsedCount >= totalWhatsAppLimit;
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -177,37 +185,81 @@ const MessageLimits = () => {
         </p>
       </div>
 
+      {(smsLimitReached || whatsappLimitReached) && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Limit Reached</AlertTitle>
+          <AlertDescription>
+            {smsLimitReached && whatsappLimitReached
+              ? "You have used all your SMS and WhatsApp limits. Ask super admin to reset and update the limits."
+              : smsLimitReached
+              ? "You have used all your SMS limits. Ask super admin to reset and update the limit."
+              : "You have used all your WhatsApp limits. Ask super admin to reset and update the limit."}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className={totalCap === 0 ? "opacity-75" : ""}>
+        <Card className={totalCap === 0 ? "opacity-75" : (totalLimit != null && totalLimit > 0 && smsUsedCount >= totalLimit ? "border-destructive" : "")}>
           <CardHeader>
             <CardTitle>Total SMS limit</CardTitle>
             <CardDescription>
               {totalCap === 0
                 ? "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."
+                : totalLimit != null && totalLimit > 0 && smsUsedCount >= totalLimit
+                ? "⚠️ You have used all your SMS limits. Ask super admin to reset and update the limit."
                 : "Set by the super admin. Divide across screens below."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">
-              {totalLimit != null && totalLimit > 0 ? totalLimit : "—"}
-              {totalLimit != null && totalLimit > 0 && <span className="text-muted-foreground text-base font-normal ml-2">SMS</span>}
+              {totalLimit != null && totalLimit > 0 ? (
+                <>
+                  <span className={smsUsedCount >= totalLimit ? "text-destructive" : ""}>
+                    {smsUsedCount} / {totalLimit}
+                  </span>
+                  <span className="text-muted-foreground text-base font-normal ml-2">SMS</span>
+                </>
+              ) : (
+                "—"
+              )}
             </p>
+            {totalLimit != null && totalLimit > 0 && smsUsedCount >= totalLimit && (
+              <p className="text-sm text-destructive mt-2 font-medium">
+                ⚠️ Limit reached. Contact super admin to reset usage and update limit.
+              </p>
+            )}
           </CardContent>
         </Card>
-        <Card className={totalWhatsAppCap === 0 ? "opacity-75" : ""}>
+        <Card className={totalWhatsAppCap === 0 ? "opacity-75" : (totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && whatsappUsedCount >= totalWhatsAppLimit ? "border-destructive" : "")}>
           <CardHeader>
             <CardTitle>Total WhatsApp limit</CardTitle>
             <CardDescription>
               {totalWhatsAppCap === 0
                 ? "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."
+                : totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && whatsappUsedCount >= totalWhatsAppLimit
+                ? "⚠️ You have used all your WhatsApp limits. Ask super admin to reset and update the limit."
                 : "Set by the super admin. Divide across screens below."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">
-              {totalWhatsAppLimit != null && totalWhatsAppLimit > 0 ? totalWhatsAppLimit : "—"}
-              {totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && <span className="text-muted-foreground text-base font-normal ml-2">WhatsApp</span>}
+              {totalWhatsAppLimit != null && totalWhatsAppLimit > 0 ? (
+                <>
+                  <span className={whatsappUsedCount >= totalWhatsAppLimit ? "text-destructive" : ""}>
+                    {whatsappUsedCount} / {totalWhatsAppLimit}
+                  </span>
+                  <span className="text-muted-foreground text-base font-normal ml-2">WhatsApp</span>
+                </>
+              ) : (
+                "—"
+              )}
             </p>
+            {totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && whatsappUsedCount >= totalWhatsAppLimit && (
+              <p className="text-sm text-destructive mt-2 font-medium">
+                ⚠️ Limit reached. Contact super admin to reset usage and update limit.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
