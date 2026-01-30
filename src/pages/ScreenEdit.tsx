@@ -983,7 +983,7 @@ const ScreenEdit = () => {
                 </div>
 
                 {/* Date Range Configuration for Playlist */}
-                {formData.playlistId && formData.playlistId !== "none" && (
+                {/* {formData.playlistId && formData.playlistId !== "none" && (
                   <div className="space-y-4 pt-4 border-t">
                     <Label className="text-sm font-medium">Playlist Date Range (Optional)</Label>
                     <p className="text-xs text-muted-foreground">
@@ -1091,7 +1091,7 @@ const ScreenEdit = () => {
                     )}
                   </div>
                 )}
-                
+                 */}
              
                 
              

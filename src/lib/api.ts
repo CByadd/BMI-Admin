@@ -147,6 +147,9 @@ export const api = {
     smsEnabled?: boolean;
     smsLimitPerScreen?: number | null;
     resetSmsCount?: boolean;
+    whatsappEnabled?: boolean;
+    whatsappLimitPerScreen?: number | null;
+    resetWhatsAppCount?: boolean;
   }) =>
     apiRequest('PUT', API_ENDPOINTS.SCREENS.UPDATE_CONFIG(screenId), config),
   uploadLogo: async (screenId: string, file: File) => {
@@ -280,7 +283,7 @@ export const api = {
   deleteAdmin: (id: string) => apiRequest('DELETE', API_ENDPOINTS.AUTH.DELETE_ADMIN(id)),
   assignScreens: (id: string, screenIds: string[]) => apiRequest('POST', API_ENDPOINTS.AUTH.ASSIGN_SCREENS(id), { screenIds }),
   getAdminScreens: (id: string) => apiRequest('GET', API_ENDPOINTS.AUTH.GET_ADMIN_SCREENS(id)),
-  setAdminScreenLimits: (id: string, screenLimits: { screenId: string; messageLimit: number | null }[]) =>
+  setAdminScreenLimits: (id: string, screenLimits: { screenId: string; messageLimit?: number | null; whatsappLimit?: number | null }[]) =>
     apiRequest('PUT', API_ENDPOINTS.AUTH.SET_ADMIN_SCREEN_LIMITS(id), { screenLimits }),
 };
 

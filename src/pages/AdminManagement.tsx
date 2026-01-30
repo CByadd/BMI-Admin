@@ -33,8 +33,9 @@ interface Admin {
   role: "admin" | "super_admin";
   isActive: boolean;
   totalMessageLimit?: number | null;
+  totalWhatsAppLimit?: number | null;
   assignedScreenIds?: string[];
-  screenLimits?: { screenId: string; messageLimit: number | null }[];
+  screenLimits?: { screenId: string; messageLimit: number | null; whatsappLimit?: number | null }[];
   createdAt: string;
 }
 
@@ -59,8 +60,9 @@ const AdminManagement = () => {
     name: "",
     role: "admin" as "admin" | "super_admin",
     totalMessageLimit: "" as string | number,
+    totalWhatsAppLimit: "" as string | number,
     screenIds: [] as string[],
-    screenLimits: [] as { screenId: string; messageLimit: number | null }[],
+    screenLimits: [] as { screenId: string; messageLimit: number | null; whatsappLimit?: number | null }[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -108,13 +110,14 @@ const AdminManagement = () => {
     if (admin) {
       setIsEditMode(true);
       setSelectedAdmin(admin);
-      const screenLimits = admin.screenLimits ?? (admin.assignedScreenIds ?? []).map((screenId) => ({ screenId, messageLimit: null as number | null }));
+      const screenLimits = admin.screenLimits ?? (admin.assignedScreenIds ?? []).map((screenId) => ({ screenId, messageLimit: null as number | null, whatsappLimit: null as number | null }));
       setFormData({
         email: admin.email,
         password: "",
         name: admin.name,
         role: admin.role,
         totalMessageLimit: admin.totalMessageLimit ?? "",
+        totalWhatsAppLimit: admin.totalWhatsAppLimit ?? "",
         screenIds: admin.assignedScreenIds || [],
         screenLimits,
       });
@@ -127,6 +130,7 @@ const AdminManagement = () => {
         name: "",
         role: "admin",
         totalMessageLimit: "",
+        totalWhatsAppLimit: "",
         screenIds: [],
         screenLimits: [],
       });
@@ -143,6 +147,7 @@ const AdminManagement = () => {
       name: "",
       role: "admin",
       totalMessageLimit: "",
+      totalWhatsAppLimit: "",
       screenIds: [],
       screenLimits: [],
     });
@@ -162,6 +167,9 @@ const AdminManagement = () => {
         };
         if (formData.role === "admin" && formData.totalMessageLimit !== "") {
           updateData.totalMessageLimit = typeof formData.totalMessageLimit === "number" ? formData.totalMessageLimit : parseInt(String(formData.totalMessageLimit), 10);
+        }
+        if (formData.role === "admin" && formData.totalWhatsAppLimit !== "") {
+          updateData.totalWhatsAppLimit = typeof formData.totalWhatsAppLimit === "number" ? formData.totalWhatsAppLimit : parseInt(String(formData.totalWhatsAppLimit), 10);
         }
         if (formData.email !== selectedAdmin.email) {
           updateData.email = formData.email;
@@ -184,6 +192,9 @@ const AdminManagement = () => {
         };
         if (formData.role === "admin" && formData.totalMessageLimit !== "") {
           registerData.totalMessageLimit = typeof formData.totalMessageLimit === "number" ? formData.totalMessageLimit : parseInt(String(formData.totalMessageLimit), 10);
+        }
+        if (formData.role === "admin" && formData.totalWhatsAppLimit !== "") {
+          registerData.totalWhatsAppLimit = typeof formData.totalWhatsAppLimit === "number" ? formData.totalWhatsAppLimit : parseInt(String(formData.totalWhatsAppLimit), 10);
         }
         await api.registerAdmin(registerData);
         toast({
@@ -230,11 +241,11 @@ const AdminManagement = () => {
       const newScreenIds = prev.screenIds.includes(screenId)
         ? prev.screenIds.filter((id) => id !== screenId)
         : [...prev.screenIds, screenId];
-      const existingLimit = prev.screenLimits.find((s) => s.screenId === screenId)?.messageLimit ?? null;
+      const existing = prev.screenLimits.find((s) => s.screenId === screenId);
       const newScreenLimits = newScreenIds.includes(screenId)
         ? prev.screenLimits.some((s) => s.screenId === screenId)
           ? prev.screenLimits
-          : [...prev.screenLimits.filter((s) => newScreenIds.includes(s.screenId)), { screenId, messageLimit: existingLimit }]
+          : [...prev.screenLimits.filter((s) => newScreenIds.includes(s.screenId)), { screenId, messageLimit: existing?.messageLimit ?? null, whatsappLimit: existing?.whatsappLimit ?? null }]
         : prev.screenLimits.filter((s) => s.screenId !== screenId);
       return { ...prev, screenIds: newScreenIds, screenLimits: newScreenLimits };
     });
@@ -243,11 +254,21 @@ const AdminManagement = () => {
   const setScreenMessageLimit = (screenId: string, value: number | null) => {
     setFormData((prev) => {
       const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
-      return { ...prev, screenLimits: [...rest, { screenId, messageLimit: value }] };
+      const existing = prev.screenLimits.find((s) => s.screenId === screenId);
+      return { ...prev, screenLimits: [...rest, { screenId, messageLimit: value, whatsappLimit: existing?.whatsappLimit ?? null }] };
+    });
+  };
+
+  const setScreenWhatsAppLimit = (screenId: string, value: number | null) => {
+    setFormData((prev) => {
+      const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
+      const existing = prev.screenLimits.find((s) => s.screenId === screenId);
+      return { ...prev, screenLimits: [...rest, { screenId, messageLimit: existing?.messageLimit ?? null, whatsappLimit: value }] };
     });
   };
 
   const getScreenLimit = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.messageLimit ?? null;
+  const getScreenWhatsAppLimit = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.whatsappLimit ?? null;
 
   if (user?.role !== "super_admin") {
     return (
@@ -301,7 +322,8 @@ const AdminManagement = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Total message limit</TableHead>
+                <TableHead>SMS limit</TableHead>
+                <TableHead>WhatsApp limit</TableHead>
                 <TableHead>Assigned Screens</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -310,7 +332,7 @@ const AdminManagement = () => {
             <TableBody>
               {                admins.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No admins found
                   </TableCell>
                 </TableRow>
@@ -334,6 +356,15 @@ const AdminManagement = () => {
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalMessageLimit != null ? (
                         <span>{admin.totalMessageLimit}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {admin.role === "super_admin" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : admin.totalWhatsAppLimit != null ? (
+                        <span>{admin.totalWhatsAppLimit}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -446,7 +477,7 @@ const AdminManagement = () => {
               {formData.role === "admin" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="totalMessageLimit">Total message limit</Label>
+                    <Label htmlFor="totalMessageLimit">Total SMS message limit</Label>
                     <Input
                       id="totalMessageLimit"
                       type="number"
@@ -459,7 +490,24 @@ const AdminManagement = () => {
                       }}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Total SMS/message limit for this admin. The admin can later divide this across their screens.
+                      Total SMS limit for this admin. The admin can later divide this across their screens.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalWhatsAppLimit">Total WhatsApp message limit</Label>
+                    <Input
+                      id="totalWhatsAppLimit"
+                      type="number"
+                      min={0}
+                      placeholder="e.g. 500"
+                      value={formData.totalWhatsAppLimit === "" ? "" : formData.totalWhatsAppLimit}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData({ ...formData, totalWhatsAppLimit: v === "" ? "" : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.totalWhatsAppLimit) });
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Total WhatsApp limit for this admin. The admin can later divide this across their screens.
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -493,19 +541,35 @@ const AdminManagement = () => {
                                 )}
                               </Label>
                               {formData.screenIds.includes(screen.screenId) && (
-                                <div className="flex items-center gap-1">
-                                  <Label className="text-xs text-muted-foreground whitespace-nowrap">Limit:</Label>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    className="w-20 h-8"
-                                    placeholder="—"
-                                    value={getScreenLimit(screen.screenId) ?? ""}
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      setScreenMessageLimit(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
-                                    }}
-                                  />
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1">
+                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">SMS:</Label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      className="w-20 h-8"
+                                      placeholder="—"
+                                      value={getScreenLimit(screen.screenId) ?? ""}
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        setScreenMessageLimit(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">WhatsApp:</Label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      className="w-20 h-8"
+                                      placeholder="—"
+                                      value={getScreenWhatsAppLimit(screen.screenId) ?? ""}
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        setScreenWhatsAppLimit(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -515,7 +579,7 @@ const AdminManagement = () => {
                     </ScrollArea>
                     {formData.role === "admin" && formData.screenIds.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Optional: set message limit per screen here. The admin can change these later.
+                        Optional: set SMS and WhatsApp limits per screen here. The admin can change these later.
                       </p>
                     )}
                   </div>

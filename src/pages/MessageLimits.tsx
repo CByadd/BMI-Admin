@@ -11,6 +11,7 @@ import { Loader2, MessageSquare } from "lucide-react";
 interface ScreenLimit {
   screenId: string;
   messageLimit: number | null;
+  whatsappLimit?: number | null;
 }
 
 interface ScreenInfo {
@@ -23,6 +24,7 @@ const MessageLimits = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [totalLimit, setTotalLimit] = useState<number | null>(null);
+  const [totalWhatsAppLimit, setTotalWhatsAppLimit] = useState<number | null>(null);
   const [screenLimits, setScreenLimits] = useState<ScreenLimit[]>([]);
   const [screens, setScreens] = useState<ScreenInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,9 @@ const MessageLimits = () => {
         api.getCurrentUser(),
         api.getAdminScreens(user.id),
       ]);
-      const me = (meRes as { user?: { totalMessageLimit?: number | null } }).user;
+      const me = (meRes as { user?: { totalMessageLimit?: number | null; totalWhatsAppLimit?: number | null } }).user;
       setTotalLimit(me?.totalMessageLimit ?? null);
+      setTotalWhatsAppLimit(me?.totalWhatsAppLimit ?? null);
       const screensList = (screensRes as { screens?: ScreenLimit[] }).screens ?? [];
       setScreenLimits(screensList);
 
@@ -74,24 +77,44 @@ const MessageLimits = () => {
   };
 
   const getLimitForScreen = (screenId: string) => screenLimits.find((s) => s.screenId === screenId)?.messageLimit ?? null;
+  const getWhatsAppLimitForScreen = (screenId: string) => screenLimits.find((s) => s.screenId === screenId)?.whatsappLimit ?? null;
 
   const setLimitForScreen = (screenId: string, value: number | null) => {
     setScreenLimits((prev) => {
       const rest = prev.filter((s) => s.screenId !== screenId);
-      return [...rest, { screenId, messageLimit: value }];
+      const existing = prev.find((s) => s.screenId === screenId);
+      return [...rest, { screenId, messageLimit: value, whatsappLimit: existing?.whatsappLimit ?? null }];
+    });
+  };
+
+  const setWhatsAppLimitForScreen = (screenId: string, value: number | null) => {
+    setScreenLimits((prev) => {
+      const rest = prev.filter((s) => s.screenId !== screenId);
+      const existing = prev.find((s) => s.screenId === screenId);
+      return [...rest, { screenId, messageLimit: existing?.messageLimit ?? null, whatsappLimit: value }];
     });
   };
 
   const totalAllocated = screenLimits.reduce((sum, s) => sum + (s.messageLimit ?? 0), 0);
   const totalCap = totalLimit ?? 0;
-  const isValid = totalCap === 0 || totalAllocated <= totalCap;
+  const totalWhatsAppAllocated = screenLimits.reduce((sum, s) => sum + (s.whatsappLimit ?? 0), 0);
+  const totalWhatsAppCap = totalWhatsAppLimit ?? 0;
+  const isValid = (totalCap === 0 || totalAllocated <= totalCap) && (totalWhatsAppCap === 0 || totalWhatsAppAllocated <= totalWhatsAppCap);
 
   const handleSave = async () => {
     if (!user?.id) return;
     if (totalCap > 0 && totalAllocated > totalCap) {
       toast({
         title: "Invalid allocation",
-        description: `Total allocated (${totalAllocated}) cannot exceed your total message limit (${totalCap}).`,
+        description: `SMS total allocated (${totalAllocated}) cannot exceed your total SMS limit (${totalCap}).`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (totalWhatsAppCap > 0 && totalWhatsAppAllocated > totalWhatsAppCap) {
+      toast({
+        title: "Invalid allocation",
+        description: `WhatsApp total allocated (${totalWhatsAppAllocated}) cannot exceed your total WhatsApp limit (${totalWhatsAppCap}).`,
         variant: "destructive",
       });
       return;
@@ -101,11 +124,12 @@ const MessageLimits = () => {
       const payload = screens.map((screen) => ({
         screenId: screen.screenId,
         messageLimit: getLimitForScreen(screen.screenId),
+        whatsappLimit: getWhatsAppLimitForScreen(screen.screenId),
       }));
       await api.setAdminScreenLimits(user.id, payload);
       toast({
         title: "Success",
-        description: "Message limits updated successfully",
+        description: "SMS and WhatsApp limits updated successfully",
       });
       fetchData();
     } catch (error: any) {
@@ -153,26 +177,38 @@ const MessageLimits = () => {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your total message limit</CardTitle>
-          <CardDescription>
-            Set by the super admin. You can divide this total across your assigned screens below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold">
-            {totalLimit != null ? totalLimit : "—"}
-            {totalLimit != null && <span className="text-muted-foreground text-base font-normal ml-2">messages</span>}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total SMS limit</CardTitle>
+            <CardDescription>Set by the super admin. Divide across screens below.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">
+              {totalLimit != null ? totalLimit : "—"}
+              {totalLimit != null && <span className="text-muted-foreground text-base font-normal ml-2">SMS</span>}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total WhatsApp limit</CardTitle>
+            <CardDescription>Set by the super admin. Divide across screens below.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">
+              {totalWhatsAppLimit != null ? totalWhatsAppLimit : "—"}
+              {totalWhatsAppLimit != null && <span className="text-muted-foreground text-base font-normal ml-2">WhatsApp</span>}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Allocate to screens</CardTitle>
           <CardDescription>
-            Set the message limit for each screen. Total allocated must not exceed {totalCap}.
+            Set SMS and WhatsApp limits per screen. SMS total must not exceed {totalCap}. WhatsApp total must not exceed {totalWhatsAppCap}.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -191,19 +227,35 @@ const MessageLimits = () => {
                       <p className="text-sm text-muted-foreground">{screen.location}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm whitespace-nowrap">Message limit:</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="w-28"
-                      placeholder="0"
-                      value={getLimitForScreen(screen.screenId) ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setLimitForScreen(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
-                      }}
-                    />
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm whitespace-nowrap">SMS:</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-24"
+                        placeholder="0"
+                        value={getLimitForScreen(screen.screenId) ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setLimitForScreen(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm whitespace-nowrap">WhatsApp:</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-24"
+                        placeholder="0"
+                        value={getWhatsAppLimitForScreen(screen.screenId) ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setWhatsAppLimitForScreen(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -213,10 +265,9 @@ const MessageLimits = () => {
           {screens.length > 0 && (
             <div className="pt-4 flex items-center justify-between flex-wrap gap-4">
               <p className="text-sm text-muted-foreground">
-                Total allocated: <strong>{totalAllocated}</strong>
-                {totalCap > 0 && (
-                  <span className={!isValid ? " text-destructive" : ""}> / {totalCap}</span>
-                )}
+                SMS: <strong>{totalAllocated}</strong>{totalCap > 0 && <span className={totalAllocated > totalCap ? " text-destructive" : ""}> / {totalCap}</span>}
+                {" · "}
+                WhatsApp: <strong>{totalWhatsAppAllocated}</strong>{totalWhatsAppCap > 0 && <span className={totalWhatsAppAllocated > totalWhatsAppCap ? " text-destructive" : ""}> / {totalWhatsAppCap}</span>}
               </p>
               <Button onClick={handleSave} disabled={saving || !isValid}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
