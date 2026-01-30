@@ -1,4 +1,4 @@
-import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users, Shield } from "lucide-react";
+import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users, Shield, MessageSquare } from "lucide-react";
 import { NavLink, useNavigate,useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -29,6 +29,8 @@ const navigationItems = [
 const adminNavigationItems = [
   { title: "Admins", url: "/admins", icon: Shield },
 ];
+
+const messageLimitsItem = { title: "Message limits", url: "/message-limits", icon: MessageSquare };
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -111,6 +113,37 @@ const location = useLocation();
 
 
 
+              {user?.role === "admin" && (
+                (() => {
+                  const item = messageLimitsItem;
+                  const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className="
+                          rounded-md
+                          transition-colors
+                          hover:bg-muted
+                          data-[active=true]:bg-primary/5
+                          data-[active=true]:border
+                          data-[active=true]:border-primary/30
+                          data-[active=true]:text-primary
+                        "
+                      >
+                        <NavLink
+                          to={item.url}
+                          className="flex items-center gap-3 px-3 py-2"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {!isCollapsed && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })()
+              )}
               {user?.role === "super_admin" &&
   adminNavigationItems.map((item) => {
     const isActive =

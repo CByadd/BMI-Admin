@@ -20,6 +20,7 @@ import PlaylistPreview from "./pages/PlaylistPreview";
 import Schedules from "./pages/Schedules";
 import ScheduleEditor from "./pages/ScheduleEditor";
 import AdminManagement from "./pages/AdminManagement";
+import MessageLimits from "./pages/MessageLimits";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -135,6 +136,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Layout><AdminManagement /></Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/message-limits" 
+              element={
+                <ProtectedRoute>
+                  <Layout><MessageLimits /></Layout>
                 </ProtectedRoute>
               } 
             />

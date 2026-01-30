@@ -71,6 +71,7 @@ export const API_ENDPOINTS = {
     DELETE_ADMIN: (id: string) => `/api/auth/admin/${id}`,
     ASSIGN_SCREENS: (id: string) => `/api/auth/admin/${id}/assign-screens`,
     GET_ADMIN_SCREENS: (id: string) => `/api/auth/admin/${id}/screens`,
+    SET_ADMIN_SCREEN_LIMITS: (id: string) => `/api/auth/admin/${id}/screen-limits`,
   },
 };
 
@@ -279,6 +280,8 @@ export const api = {
   deleteAdmin: (id: string) => apiRequest('DELETE', API_ENDPOINTS.AUTH.DELETE_ADMIN(id)),
   assignScreens: (id: string, screenIds: string[]) => apiRequest('POST', API_ENDPOINTS.AUTH.ASSIGN_SCREENS(id), { screenIds }),
   getAdminScreens: (id: string) => apiRequest('GET', API_ENDPOINTS.AUTH.GET_ADMIN_SCREENS(id)),
+  setAdminScreenLimits: (id: string, screenLimits: { screenId: string; messageLimit: number | null }[]) =>
+    apiRequest('PUT', API_ENDPOINTS.AUTH.SET_ADMIN_SCREEN_LIMITS(id), { screenLimits }),
 };
 
 export default api;

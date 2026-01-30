@@ -32,7 +32,9 @@ interface Admin {
   name: string;
   role: "admin" | "super_admin";
   isActive: boolean;
+  totalMessageLimit?: number | null;
   assignedScreenIds?: string[];
+  screenLimits?: { screenId: string; messageLimit: number | null }[];
   createdAt: string;
 }
 
@@ -56,7 +58,9 @@ const AdminManagement = () => {
     password: "",
     name: "",
     role: "admin" as "admin" | "super_admin",
+    totalMessageLimit: "" as string | number,
     screenIds: [] as string[],
+    screenLimits: [] as { screenId: string; messageLimit: number | null }[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -104,12 +108,15 @@ const AdminManagement = () => {
     if (admin) {
       setIsEditMode(true);
       setSelectedAdmin(admin);
+      const screenLimits = admin.screenLimits ?? (admin.assignedScreenIds ?? []).map((screenId) => ({ screenId, messageLimit: null as number | null }));
       setFormData({
         email: admin.email,
         password: "",
         name: admin.name,
         role: admin.role,
+        totalMessageLimit: admin.totalMessageLimit ?? "",
         screenIds: admin.assignedScreenIds || [],
+        screenLimits,
       });
     } else {
       setIsEditMode(false);
@@ -119,7 +126,9 @@ const AdminManagement = () => {
         password: "",
         name: "",
         role: "admin",
+        totalMessageLimit: "",
         screenIds: [],
+        screenLimits: [],
       });
     }
     setIsDialogOpen(true);
@@ -133,7 +142,9 @@ const AdminManagement = () => {
       password: "",
       name: "",
       role: "admin",
+      totalMessageLimit: "",
       screenIds: [],
+      screenLimits: [],
     });
   };
 
@@ -147,7 +158,11 @@ const AdminManagement = () => {
           name: formData.name,
           role: formData.role,
           screenIds: formData.screenIds,
+          screenLimits: formData.screenLimits.filter((s) => formData.screenIds.includes(s.screenId)),
         };
+        if (formData.role === "admin" && formData.totalMessageLimit !== "") {
+          updateData.totalMessageLimit = typeof formData.totalMessageLimit === "number" ? formData.totalMessageLimit : parseInt(String(formData.totalMessageLimit), 10);
+        }
         if (formData.email !== selectedAdmin.email) {
           updateData.email = formData.email;
         }
@@ -160,13 +175,17 @@ const AdminManagement = () => {
           description: "Admin updated successfully",
         });
       } else {
-        await api.registerAdmin({
+        const registerData: any = {
           email: formData.email,
           password: formData.password,
           name: formData.name,
           role: formData.role,
           screenIds: formData.screenIds,
-        });
+        };
+        if (formData.role === "admin" && formData.totalMessageLimit !== "") {
+          registerData.totalMessageLimit = typeof formData.totalMessageLimit === "number" ? formData.totalMessageLimit : parseInt(String(formData.totalMessageLimit), 10);
+        }
+        await api.registerAdmin(registerData);
         toast({
           title: "Success",
           description: "Admin created successfully",
@@ -207,13 +226,28 @@ const AdminManagement = () => {
   };
 
   const toggleScreen = (screenId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      screenIds: prev.screenIds.includes(screenId)
+    setFormData((prev) => {
+      const newScreenIds = prev.screenIds.includes(screenId)
         ? prev.screenIds.filter((id) => id !== screenId)
-        : [...prev.screenIds, screenId],
-    }));
+        : [...prev.screenIds, screenId];
+      const existingLimit = prev.screenLimits.find((s) => s.screenId === screenId)?.messageLimit ?? null;
+      const newScreenLimits = newScreenIds.includes(screenId)
+        ? prev.screenLimits.some((s) => s.screenId === screenId)
+          ? prev.screenLimits
+          : [...prev.screenLimits.filter((s) => newScreenIds.includes(s.screenId)), { screenId, messageLimit: existingLimit }]
+        : prev.screenLimits.filter((s) => s.screenId !== screenId);
+      return { ...prev, screenIds: newScreenIds, screenLimits: newScreenLimits };
+    });
   };
+
+  const setScreenMessageLimit = (screenId: string, value: number | null) => {
+    setFormData((prev) => {
+      const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
+      return { ...prev, screenLimits: [...rest, { screenId, messageLimit: value }] };
+    });
+  };
+
+  const getScreenLimit = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.messageLimit ?? null;
 
   if (user?.role !== "super_admin") {
     return (
@@ -267,15 +301,16 @@ const AdminManagement = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Total message limit</TableHead>
                 <TableHead>Assigned Screens</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {admins.length === 0 ? (
+              {                admins.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No admins found
                   </TableCell>
                 </TableRow>
@@ -293,6 +328,15 @@ const AdminManagement = () => {
                       <Badge variant={admin.isActive ? "default" : "destructive"}>
                         {admin.isActive ? "Active" : "Inactive"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {admin.role === "super_admin" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : admin.totalMessageLimit != null ? (
+                        <span>{admin.totalMessageLimit}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {admin.role === "super_admin" ? (
@@ -400,42 +444,82 @@ const AdminManagement = () => {
                 </select>
               </div>
               {formData.role === "admin" && (
-                <div className="space-y-2">
-                  <Label>Assign Screens</Label>
-                  <ScrollArea className="h-64 border rounded-md p-4">
-                    <div className="space-y-2">
-                      {screens.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No screens available
-                        </p>
-                      ) : (
-                        screens.map((screen) => (
-                          <div
-                            key={screen.screenId}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={screen.screenId}
-                              checked={formData.screenIds.includes(screen.screenId)}
-                              onCheckedChange={() => toggleScreen(screen.screenId)}
-                            />
-                            <Label
-                              htmlFor={screen.screenId}
-                              className="text-sm font-normal cursor-pointer"
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalMessageLimit">Total message limit</Label>
+                    <Input
+                      id="totalMessageLimit"
+                      type="number"
+                      min={0}
+                      placeholder="e.g. 1000"
+                      value={formData.totalMessageLimit === "" ? "" : formData.totalMessageLimit}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData({ ...formData, totalMessageLimit: v === "" ? "" : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.totalMessageLimit) });
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Total SMS/message limit for this admin. The admin can later divide this across their screens.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Assign Screens</Label>
+                    <ScrollArea className="h-64 border rounded-md p-4">
+                      <div className="space-y-2">
+                        {screens.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No screens available
+                          </p>
+                        ) : (
+                          screens.map((screen) => (
+                            <div
+                              key={screen.screenId}
+                              className="flex items-center gap-2 flex-wrap"
                             >
-                              {screen.deviceName || screen.screenId}
-                              {screen.location && (
-                                <span className="text-muted-foreground ml-2">
-                                  ({screen.location})
-                                </span>
+                              <Checkbox
+                                id={screen.screenId}
+                                checked={formData.screenIds.includes(screen.screenId)}
+                                onCheckedChange={() => toggleScreen(screen.screenId)}
+                              />
+                              <Label
+                                htmlFor={screen.screenId}
+                                className="text-sm font-normal cursor-pointer flex-1 min-w-0"
+                              >
+                                {screen.deviceName || screen.screenId}
+                                {screen.location && (
+                                  <span className="text-muted-foreground ml-2">
+                                    ({screen.location})
+                                  </span>
+                                )}
+                              </Label>
+                              {formData.screenIds.includes(screen.screenId) && (
+                                <div className="flex items-center gap-1">
+                                  <Label className="text-xs text-muted-foreground whitespace-nowrap">Limit:</Label>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    className="w-20 h-8"
+                                    placeholder="—"
+                                    value={getScreenLimit(screen.screenId) ?? ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      setScreenMessageLimit(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
+                                    }}
+                                  />
+                                </div>
                               )}
-                            </Label>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </ScrollArea>
-                </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                    {formData.role === "admin" && formData.screenIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Optional: set message limit per screen here. The admin can change these later.
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
             <DialogFooter>
