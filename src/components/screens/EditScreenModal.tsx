@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 
 interface EditScreenModalProps {
@@ -38,7 +39,10 @@ interface Playlist {
 
 const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModalProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { updateScreen, refreshScreens } = useData();
+  const smsEnabledForAccount = user?.role !== "admin" || ((user as any)?.totalMessageLimit != null && Number((user as any).totalMessageLimit) > 0);
+  const whatsappEnabledForAccount = user?.role !== "admin" || ((user as any)?.totalWhatsAppLimit != null && Number((user as any).totalWhatsAppLimit) > 0);
   const [formData, setFormData] = useState({
     name: screen.name,
     location: screen.location || "",
@@ -841,10 +845,14 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
             {/* SMS after payment (for screens with payment flow) */}
             {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
               <>
-                <div className="space-y-4 pt-4 border-t border-border">
+                <div className={cn("space-y-4 pt-4 border-t border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
                   <Label className="text-sm font-medium">SMS after payment</Label>
                   <p className="text-xs text-muted-foreground">
-                    When enabled, an SMS is sent to the user&apos;s mobile after payment. Use the limit to cap how many SMS can be sent for this screen.
+                    {smsEnabledForAccount
+                      ? user?.role === "super_admin"
+                        ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
+                        : "When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
+                      : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
                   </p>
                   <div className="flex items-center justify-between space-x-2">
                     <div className="space-y-0.5">
@@ -855,6 +863,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                       id="smsEnabled"
                       checked={formData.smsEnabled}
                       onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
+                      disabled={!smsEnabledForAccount}
                     />
                   </div>
                   {formData.smsEnabled && (
@@ -913,10 +922,14 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                     </>
                   )}
                 </div>
-                <div className="space-y-4 pt-4 border-t border-border">
+                <div className={cn("space-y-4 pt-4 border-t border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
                   <Label className="text-sm font-medium">WhatsApp after payment</Label>
                   <p className="text-xs text-muted-foreground">
-                    When enabled, a WhatsApp message is sent to the user&apos;s mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen.
+                    {whatsappEnabledForAccount
+                      ? user?.role === "super_admin"
+                        ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
+                        : "When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
+                      : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
                   </p>
                   <div className="flex items-center justify-between space-x-2">
                     <div className="space-y-0.5">
@@ -927,6 +940,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                       id="whatsappEnabled"
                       checked={formData.whatsappEnabled}
                       onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
+                      disabled={!whatsappEnabledForAccount}
                     />
                   </div>
                   {formData.whatsappEnabled && (

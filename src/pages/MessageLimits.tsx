@@ -178,27 +178,35 @@ const MessageLimits = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className={totalCap === 0 ? "opacity-75" : ""}>
           <CardHeader>
             <CardTitle>Total SMS limit</CardTitle>
-            <CardDescription>Set by the super admin. Divide across screens below.</CardDescription>
+            <CardDescription>
+              {totalCap === 0
+                ? "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."
+                : "Set by the super admin. Divide across screens below."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">
-              {totalLimit != null ? totalLimit : "—"}
-              {totalLimit != null && <span className="text-muted-foreground text-base font-normal ml-2">SMS</span>}
+              {totalLimit != null && totalLimit > 0 ? totalLimit : "—"}
+              {totalLimit != null && totalLimit > 0 && <span className="text-muted-foreground text-base font-normal ml-2">SMS</span>}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={totalWhatsAppCap === 0 ? "opacity-75" : ""}>
           <CardHeader>
             <CardTitle>Total WhatsApp limit</CardTitle>
-            <CardDescription>Set by the super admin. Divide across screens below.</CardDescription>
+            <CardDescription>
+              {totalWhatsAppCap === 0
+                ? "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."
+                : "Set by the super admin. Divide across screens below."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">
-              {totalWhatsAppLimit != null ? totalWhatsAppLimit : "—"}
-              {totalWhatsAppLimit != null && <span className="text-muted-foreground text-base font-normal ml-2">WhatsApp</span>}
+              {totalWhatsAppLimit != null && totalWhatsAppLimit > 0 ? totalWhatsAppLimit : "—"}
+              {totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && <span className="text-muted-foreground text-base font-normal ml-2">WhatsApp</span>}
             </p>
           </CardContent>
         </Card>
@@ -208,7 +216,7 @@ const MessageLimits = () => {
         <CardHeader>
           <CardTitle>Allocate to screens</CardTitle>
           <CardDescription>
-            Set SMS and WhatsApp limits per screen. SMS total must not exceed {totalCap}. WhatsApp total must not exceed {totalWhatsAppCap}.
+            Set SMS and WhatsApp limits per screen (only for channels enabled for your account). SMS total must not exceed {totalCap}. WhatsApp total must not exceed {totalWhatsAppCap}.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -228,7 +236,7 @@ const MessageLimits = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-2 ${totalCap === 0 ? "opacity-50 pointer-events-none" : ""}`}>
                       <Label className="text-sm whitespace-nowrap">SMS:</Label>
                       <Input
                         type="number"
@@ -240,9 +248,10 @@ const MessageLimits = () => {
                           const v = e.target.value;
                           setLimitForScreen(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
                         }}
+                        disabled={totalCap === 0}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-2 ${totalWhatsAppCap === 0 ? "opacity-50 pointer-events-none" : ""}`}>
                       <Label className="text-sm whitespace-nowrap">WhatsApp:</Label>
                       <Input
                         type="number"
@@ -254,6 +263,7 @@ const MessageLimits = () => {
                           const v = e.target.value;
                           setWhatsAppLimitForScreen(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
                         }}
+                        disabled={totalWhatsAppCap === 0}
                       />
                     </div>
                   </div>
@@ -266,8 +276,10 @@ const MessageLimits = () => {
             <div className="pt-4 flex items-center justify-between flex-wrap gap-4">
               <p className="text-sm text-muted-foreground">
                 SMS: <strong>{totalAllocated}</strong>{totalCap > 0 && <span className={totalAllocated > totalCap ? " text-destructive" : ""}> / {totalCap}</span>}
+                {totalCap === 0 && <span className="text-muted-foreground"> (disabled)</span>}
                 {" · "}
                 WhatsApp: <strong>{totalWhatsAppAllocated}</strong>{totalWhatsAppCap > 0 && <span className={totalWhatsAppAllocated > totalWhatsAppCap ? " text-destructive" : ""}> / {totalWhatsAppCap}</span>}
+                {totalWhatsAppCap === 0 && <span className="text-muted-foreground"> (disabled)</span>}
               </p>
               <Button onClick={handleSave} disabled={saving || !isValid}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
