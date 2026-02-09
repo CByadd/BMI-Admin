@@ -346,6 +346,12 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
       configPayload.playlistEndDate = formData.playlistEndDate ? formData.playlistEndDate.toISOString() : null;
       
       console.log("Saving screen config:", configPayload);
+      console.log("SMS/WhatsApp toggles:", { 
+        smsEnabled: formData.smsEnabled, 
+        whatsappEnabled: formData.whatsappEnabled,
+        smsLimitPerScreen: formData.smsLimitPerScreen,
+        whatsappLimitPerScreen: formData.whatsappLimitPerScreen
+      });
       console.log("Playlist assignment details:", {
         playlistId: configPayload.playlistId,
         playlistStartDate: configPayload.playlistStartDate,
@@ -845,156 +851,204 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
             {/* SMS after payment (for screens with payment flow) */}
             {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
               <>
-                <div className={cn("space-y-4 pt-4 border-t border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
-                  <Label className="text-sm font-medium">SMS after payment</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {smsEnabledForAccount
-                      ? user?.role === "super_admin"
-                        ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
-                        : "When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
-                      : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
-                  </p>
-                  <div className="flex items-center justify-between space-x-2">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="smsEnabled">Send SMS after payment</Label>
-                      <p className="text-sm text-muted-foreground">Enable or disable SMS for this screen</p>
+                <div className={cn("space-y-4 pt-4 border-t-2 border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1 flex-1">
+                      <Label className="text-base font-semibold flex items-center gap-2">
+                        📱 SMS Messaging
+                        {formData.smsEnabled && (
+                          <Badge variant="default" className="text-xs">Enabled</Badge>
+                        )}
+                        {!formData.smsEnabled && smsEnabledForAccount && (
+                          <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                        )}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {smsEnabledForAccount
+                          ? user?.role === "super_admin"
+                            ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
+                            : "⚠️ IMPORTANT: Even though your admin account has SMS limits, you must toggle this ON for each screen to send SMS. When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
+                          : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
+                      </p>
+                      {!formData.smsEnabled && smsEnabledForAccount && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                          ⚠️ SMS is currently OFF for this screen. Toggle it ON to enable SMS sending.
+                        </p>
+                      )}
                     </div>
-                    <Switch
-                      id="smsEnabled"
-                      checked={formData.smsEnabled}
-                      onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
-                      disabled={!smsEnabledForAccount}
-                    />
+                    <div className="flex flex-col items-end gap-1">
+                      <Switch
+                        id="smsEnabled"
+                        checked={formData.smsEnabled}
+                        onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
+                        disabled={!smsEnabledForAccount}
+                        className="scale-125"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {formData.smsEnabled ? "ON" : "OFF"}
+                      </span>
+                    </div>
                   </div>
                   {formData.smsEnabled && (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
-                        <Input
-                          id="smsLimitPerScreen"
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={formData.smsLimitPerScreen ?? ""}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setFormData({
-                              ...formData,
-                              smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
-                            });
-                          }}
-                          placeholder="No limit"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Leave empty for no limit. Once reached, no more SMS until reset.
-                        </p>
-                      </div>
+                      {user?.role !== "super_admin" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
+                          <Input
+                            id="smsLimitPerScreen"
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={formData.smsLimitPerScreen ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setFormData({
+                                ...formData,
+                                smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
+                              });
+                            }}
+                            placeholder="No limit"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Leave empty for no limit. Once reached, no more SMS until reset.
+                          </p>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <span className="text-sm text-muted-foreground">
                           SMS sent: <strong>{formData.smsSentCount}</strong>
                           {formData.smsLimitPerScreen != null && <span className="ml-1">/ {formData.smsLimitPerScreen}</span>}
+                          {user?.role === "super_admin" && formData.smsLimitPerScreen != null && (
+                            <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                          )}
                         </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const r = await api.updateScreenConfig(screen.id, { resetSmsCount: true });
-                              if (r && (r as any).ok !== false) {
-                                setFormData((f) => ({ ...f, smsSentCount: 0 }));
-                                toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
-                                await refreshScreens();
-                                loadCurrentPlaylist();
-                              } else throw new Error((r as any)?.error || "Reset failed");
-                            } catch (err: any) {
-                              toast({
-                                title: "Reset failed",
-                                description: err?.message || "Could not reset SMS count",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          Reset SMS count
-                        </Button>
+                        {user?.role !== "super_admin" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const r = await api.updateScreenConfig(screen.id, { resetSmsCount: true });
+                                if (r && (r as any).ok !== false) {
+                                  setFormData((f) => ({ ...f, smsSentCount: 0 }));
+                                  toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
+                                  await refreshScreens();
+                                  loadCurrentPlaylist();
+                                } else throw new Error((r as any)?.error || "Reset failed");
+                              } catch (err: any) {
+                                toast({
+                                  title: "Reset failed",
+                                  description: err?.message || "Could not reset SMS count",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            Reset SMS count
+                          </Button>
+                        )}
                       </div>
                     </>
                   )}
                 </div>
-                <div className={cn("space-y-4 pt-4 border-t border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
-                  <Label className="text-sm font-medium">WhatsApp after payment</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {whatsappEnabledForAccount
-                      ? user?.role === "super_admin"
-                        ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
-                        : "When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
-                      : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
-                  </p>
-                  <div className="flex items-center justify-between space-x-2">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="whatsappEnabled">Send WhatsApp after payment</Label>
-                      <p className="text-sm text-muted-foreground">Enable or disable WhatsApp for this screen</p>
+                <div className={cn("space-y-4 pt-4 border-t-2 border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1 flex-1">
+                      <Label className="text-base font-semibold flex items-center gap-2">
+                        💬 WhatsApp Messaging
+                        {formData.whatsappEnabled && (
+                          <Badge variant="default" className="text-xs">Enabled</Badge>
+                        )}
+                        {!formData.whatsappEnabled && whatsappEnabledForAccount && (
+                          <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                        )}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {whatsappEnabledForAccount
+                          ? user?.role === "super_admin"
+                            ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
+                            : "⚠️ IMPORTANT: Even though your admin account has WhatsApp limits, you must toggle this ON for each screen to send WhatsApp. When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
+                          : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
+                      </p>
+                      {!formData.whatsappEnabled && whatsappEnabledForAccount && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                          ⚠️ WhatsApp is currently OFF for this screen. Toggle it ON to enable WhatsApp sending.
+                        </p>
+                      )}
                     </div>
-                    <Switch
-                      id="whatsappEnabled"
-                      checked={formData.whatsappEnabled}
-                      onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
-                      disabled={!whatsappEnabledForAccount}
-                    />
+                    <div className="flex flex-col items-end gap-1">
+                      <Switch
+                        id="whatsappEnabled"
+                        checked={formData.whatsappEnabled}
+                        onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
+                        disabled={!whatsappEnabledForAccount}
+                        className="scale-125"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {formData.whatsappEnabled ? "ON" : "OFF"}
+                      </span>
+                    </div>
                   </div>
                   {formData.whatsappEnabled && (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="whatsappLimitPerScreen">Max WhatsApp per screen</Label>
-                        <Input
-                          id="whatsappLimitPerScreen"
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={formData.whatsappLimitPerScreen ?? ""}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setFormData({
-                              ...formData,
-                              whatsappLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.whatsappLimitPerScreen),
-                            });
-                          }}
-                          placeholder="No limit"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Leave empty for no limit. Once reached, no more WhatsApp until reset.
-                        </p>
-                      </div>
+                      {user?.role !== "super_admin" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="whatsappLimitPerScreen">Max WhatsApp per screen</Label>
+                          <Input
+                            id="whatsappLimitPerScreen"
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={formData.whatsappLimitPerScreen ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setFormData({
+                                ...formData,
+                                whatsappLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.whatsappLimitPerScreen),
+                              });
+                            }}
+                            placeholder="No limit"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Leave empty for no limit. Once reached, no more WhatsApp until reset.
+                          </p>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <span className="text-sm text-muted-foreground">
                           WhatsApp sent: <strong>{formData.whatsappSentCount}</strong>
                           {formData.whatsappLimitPerScreen != null && <span className="ml-1">/ {formData.whatsappLimitPerScreen}</span>}
+                          {user?.role === "super_admin" && formData.whatsappLimitPerScreen != null && (
+                            <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                          )}
                         </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const r = await api.updateScreenConfig(screen.id, { resetWhatsAppCount: true });
-                              if (r && (r as any).ok !== false) {
-                                setFormData((f) => ({ ...f, whatsappSentCount: 0 }));
-                                toast({ title: "WhatsApp count reset", description: "WhatsApp sent count has been set to 0." });
-                                await refreshScreens();
-                                loadCurrentPlaylist();
-                              } else throw new Error((r as any)?.error || "Reset failed");
-                            } catch (err: any) {
-                              toast({
-                                title: "Reset failed",
-                                description: err?.message || "Could not reset WhatsApp count",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          Reset WhatsApp count
-                        </Button>
+                        {user?.role !== "super_admin" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const r = await api.updateScreenConfig(screen.id, { resetWhatsAppCount: true });
+                                if (r && (r as any).ok !== false) {
+                                  setFormData((f) => ({ ...f, whatsappSentCount: 0 }));
+                                  toast({ title: "WhatsApp count reset", description: "WhatsApp sent count has been set to 0." });
+                                  await refreshScreens();
+                                  loadCurrentPlaylist();
+                                } else throw new Error((r as any)?.error || "Reset failed");
+                              } catch (err: any) {
+                                toast({
+                                  title: "Reset failed",
+                                  description: err?.message || "Could not reset WhatsApp count",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            Reset WhatsApp count
+                          </Button>
+                        )}
                       </div>
                     </>
                   )}
