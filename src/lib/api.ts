@@ -86,11 +86,11 @@ async function apiRequest<T>(
   config?: any
 ): Promise<T> {
   const { setLoading, setError } = useApiStore.getState();
-  
+
   try {
     setLoading(true);
     setError(null);
-    
+
     let response;
     switch (method) {
       case 'GET':
@@ -106,7 +106,7 @@ async function apiRequest<T>(
         response = await axiosInstance.delete<T>(endpoint, { ...config, data });
         break;
     }
-    
+
     return response.data;
   } catch (error: any) {
     const errorMessage = error.message || 'An error occurred';
@@ -156,7 +156,7 @@ export const api = {
   uploadLogo: async (screenId: string, file: File) => {
     const formData = new FormData();
     formData.append('logo', file);
-    
+
     const { setLoading, setError } = useApiStore.getState();
     try {
       setLoading(true);
@@ -180,7 +180,7 @@ export const api = {
   uploadFlowDrawerImage: async (screenId: string, imageNumber: number, file: File) => {
     const formData = new FormData();
     formData.append('image', file);
-    
+
     const { setLoading, setError } = useApiStore.getState();
     try {
       setLoading(true);
@@ -199,13 +199,13 @@ export const api = {
       setLoading(false);
     }
   },
-  deleteFlowDrawerImage: (screenId: string, imageNumber: number) => 
+  deleteFlowDrawerImage: (screenId: string, imageNumber: number) =>
     apiRequest('DELETE', API_ENDPOINTS.SCREENS.DELETE_FLOW_DRAWER_IMAGE(screenId, imageNumber)),
   deletePlayer: (screenId: string) => apiRequest('DELETE', API_ENDPOINTS.SCREENS.DELETE(screenId)),
 
   // Analytics
   getBMIStats: () => apiRequest('GET', API_ENDPOINTS.ANALYTICS.BMI_STATS),
-  getUserActivity: () => apiRequest('GET', API_ENDPOINTS.ANALYTICS.USER_ACTIVITY),
+  getUserActivity: (days?: number) => apiRequest('GET', `${API_ENDPOINTS.ANALYTICS.USER_ACTIVITY}${days ? `?days=${days}` : ''}`),
   getWeightClassification: () => apiRequest('GET', API_ENDPOINTS.ANALYTICS.WEIGHT_CLASSIFICATION),
   getScreenBMIRecords: (screenId: string, dateFilter?: string, startDate?: string, endDate?: string, page?: number, limit?: number) => {
     const params = new URLSearchParams();

@@ -1,5 +1,5 @@
 import { Activity, MonitorDot, ImageIcon, List, Calendar, LogOut, Users, Shield, MessageSquare } from "lucide-react";
-import { NavLink, useNavigate,useLocation } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +14,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +38,58 @@ const adminNavigationItems = [
 
 const messageLimitsItem = { title: "Message limits", url: "/message-limits", icon: MessageSquare };
 
+function NavItem({
+  item,
+  isCollapsed,
+}: {
+  item: { title: string; url: string; icon: React.ElementType };
+  isCollapsed: boolean;
+}) {
+  const location = useLocation();
+  const isActive =
+    location.pathname === item.url ||
+    location.pathname.startsWith(item.url + "/");
+
+  const buttonContent = (
+    <SidebarMenuButton
+      asChild
+      isActive={isActive}
+      className="
+        rounded-md
+        transition-colors
+        hover:bg-muted
+        data-[active=true]:bg-primary/5
+        data-[active=true]:border
+        data-[active=true]:border-primary/30
+        data-[active=true]:text-primary
+      "
+    >
+      <NavLink
+        to={item.url}
+        className={`flex items-center gap-3 ${isCollapsed ? "justify-center px-2 py-2" : "px-3 py-2"}`}
+      >
+        <item.icon className="h-5 w-5 flex-shrink-0" />
+        {!isCollapsed && <span>{item.title}</span>}
+      </NavLink>
+    </SidebarMenuButton>
+  );
+
+  return (
+    <SidebarMenuItem key={item.title}>
+      {isCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.title}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        buttonContent
+      )}
+    </SidebarMenuItem>
+  );
+}
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const { logout, user } = useAuth();
@@ -47,151 +105,71 @@ export function AppSidebar() {
     navigate("/");
   };
 
-const location = useLocation();
-
-
   const isCollapsed = state === "collapsed";
 
-  return (
-    <Sidebar className={isCollapsed ? "w-16" : "w-60"} collapsible="icon">
-       
- <SidebarHeader className="border-b border-border px-2 py-4"> 
-  <div className="flex items-center">
-    <img
-      src="https://well2day.in/assets/img/Group%202325.png"
-      className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} object-contain flex-shrink-0`}
-      alt="logo"
-    />
-
-    {!isCollapsed && (
-      <h1 className="ml-3 text-lg font-bold text-foreground">
-        Well2Day Admin
-      </h1>
-    )}
-  </div>
-</SidebarHeader>
-
-
-
-      <SidebarContent>
-        <SidebarGroup>
-          {/* <SidebarGroupLabel>Navigation</SidebarGroupLabel> */}
-          <SidebarGroupContent>
-            <SidebarMenu>
- {navigationItems.map((item) => {
-  const isActive =
-    location.pathname === item.url ||
-    location.pathname.startsWith(item.url + "/");
-
-  return (
-    <SidebarMenuItem key={item.title}>
-      <SidebarMenuButton
-        asChild
-        isActive={isActive}
-        className="
-          rounded-md
-          transition-colors
-          hover:bg-muted
-          data-[active=true]:bg-primary/5
-          data-[active=true]:border
-          data-[active=true]:border-primary/30
-          data-[active=true]:text-primary
-        "
-      >
-        <NavLink
-          to={item.url}
-          className="flex items-center gap-3 px-3 py-2"
-        >
-          <item.icon className="h-4 w-4" />
-          {!isCollapsed && <span>{item.title}</span>}
-        </NavLink>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+  const logoutButton = (
+    <Button
+      variant="ghost"
+      onClick={handleLogout}
+      className={`w-full ${isCollapsed ? "justify-center px-2" : "justify-start"}`}
+    >
+      <LogOut className="h-5 w-5 flex-shrink-0" />
+      {!isCollapsed && <span className="ml-2">Logout</span>}
+    </Button>
   );
-})}
 
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Sidebar className={isCollapsed ? "w-24" : "w-60"} collapsible="icon">
+        <SidebarHeader className=" px-2 py-4">
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : ""}`}>
+            <img
+              src="https://well2day.in/assets/img/Group%202325.png"
+              className={`${isCollapsed ? "h-9 w-9" : "h-10 w-10"} object-contain flex-shrink-0`}
+              alt="logo"
+            />
+            {!isCollapsed && (
+              <h1 className="ml-3 text-lg font-bold text-foreground">
+                Well2Day Admin
+              </h1>
+            )}
+          </div>
+        </SidebarHeader>
 
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navigationItems.map((item) => (
+                  <NavItem key={item.title} item={item} isCollapsed={isCollapsed} />
+                ))}
 
+                {user?.role === "admin" && (
+                  <NavItem item={messageLimitsItem} isCollapsed={isCollapsed} />
+                )}
 
-              {user?.role === "admin" && (
-                (() => {
-                  const item = messageLimitsItem;
-                  const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        className="
-                          rounded-md
-                          transition-colors
-                          hover:bg-muted
-                          data-[active=true]:bg-primary/5
-                          data-[active=true]:border
-                          data-[active=true]:border-primary/30
-                          data-[active=true]:text-primary
-                        "
-                      >
-                        <NavLink
-                          to={item.url}
-                          className="flex items-center gap-3 px-3 py-2"
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {!isCollapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })()
-              )}
-              {user?.role === "super_admin" &&
-  adminNavigationItems.map((item) => {
-    const isActive =
-      location.pathname === item.url ||
-      location.pathname.startsWith(item.url + "/");
+                {user?.role === "super_admin" &&
+                  adminNavigationItems.map((item) => (
+                    <NavItem key={item.title} item={item} isCollapsed={isCollapsed} />
+                  ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-    return (
-      <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton
-          asChild
-          isActive={isActive}
-          className="
-            rounded-md
-            transition-colors
-            hover:bg-muted
-            data-[active=true]:bg-primary/5
-            data-[active=true]:border
-            data-[active=true]:border-primary/30
-            data-[active=true]:text-primary
-          "
-        >
-          <NavLink
-            to={item.url}
-            className="flex items-center gap-3 px-3 py-2"
-          >
-            <item.icon className="h-4 w-4" />
-            {!isCollapsed && <span>{item.title}</span>}
-          </NavLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    );
-  })}
-
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="border-t border-border p-4">
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className="w-full justify-start"
-        >
-          <LogOut className="h-4 w-4" />
-          {!isCollapsed && <span>Logout</span>}
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+        <SidebarFooter className="border-t border-border p-3">
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>{logoutButton}</TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                Logout
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            logoutButton
+          )}
+        </SidebarFooter>
+      </Sidebar>
+    </TooltipProvider>
   );
 }

@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Users as UsersIcon, Loader2, Calendar, Phone, Activity, Download, Monitor } from "lucide-react";
+import { Search, Users as UsersIcon, Loader2, Activity, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 import * as XLSX from "xlsx";
@@ -86,7 +86,7 @@ const Users = () => {
   const exportToExcel = () => {
     try {
       setExporting(true);
-      
+
       // Prepare data for export
       const exportData = filteredUsers.map((user, index) => ({
         '#': index + 1,
@@ -156,7 +156,7 @@ const Users = () => {
             </div>
             <div className="h-10 w-32 bg-muted animate-pulse rounded" />
           </div>
-          
+
           {/* Stats Cards Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -166,7 +166,7 @@ const Users = () => {
               </div>
             ))}
           </div>
-          
+
           {/* Table Skeleton */}
           <div className="border rounded-lg p-4">
             <div className="space-y-3">
@@ -286,84 +286,58 @@ const Users = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="text-xs sm:text-sm min-w-[750px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">#</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4" />
-                        Mobile
-                      </div>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Joined Date
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Activity className="w-4 h-4" />
-                        BMI Records
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-center">Latest BMI</TableHead>
-                    <TableHead className="text-center">BMI Category</TableHead>
-                    <TableHead className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Monitor className="w-4 h-4" />
-                        Screen ID
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-center">Last Updated</TableHead>
+                    <TableHead className="w-[40px] px-2 py-2">#</TableHead>
+                    <TableHead className="px-2 py-2 whitespace-nowrap">Name</TableHead>
+                    <TableHead className="px-2 py-2 whitespace-nowrap">Mobile</TableHead>
+                    <TableHead className="px-2 py-2 whitespace-nowrap">Joined</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">BMI Records</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">BMI</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">Category</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">Screen ID</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user, index) => (
                     <TableRow key={user.id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium text-muted-foreground">
+                      <TableCell className="px-2 py-2 font-medium text-muted-foreground">
                         {index + 1}
                       </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-foreground">{user.name}</div>
+                      <TableCell className="px-2 py-2">
+                        <div className="font-semibold text-foreground whitespace-nowrap">{user.name}</div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-3 h-3" />
-                          <span>{user.mobile}</span>
-                        </div>
+                      <TableCell className="px-2 py-2 whitespace-nowrap text-muted-foreground">
+                        {user.mobile}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          <span>{new Date(user.createdAt).toLocaleDateString()}</span>
-                        </div>
+                      <TableCell className="px-2 py-2 whitespace-nowrap text-muted-foreground">
+                        {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="px-2 py-2 text-center">
                         {user.totalBMIRecords !== undefined ? (
-                          <Badge variant="secondary" className="font-semibold">
+                          <Badge variant="secondary" className="font-semibold text-xs px-1.5 py-0.5">
                             {user.totalBMIRecords}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="px-2 py-2 text-center">
                         {user.latestBMI ? (
-                          <Badge variant="outline" className="font-semibold">
+                          <Badge variant="outline" className="font-semibold text-xs px-1.5 py-0.5">
                             {user.latestBMI.bmi.toFixed(1)}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="px-2 py-2 text-center">
                         {user.latestBMI ? (
-                          <Badge 
-                            variant="outline" 
-                            className={`font-semibold ${getBMICategoryColor(user.latestBMI.category)}`}
+                          <Badge
+                            variant="outline"
+                            className={`font-semibold text-xs px-1.5 py-0.5 ${getBMICategoryColor(user.latestBMI.category)}`}
                           >
                             {user.latestBMI.category}
                           </Badge>
@@ -371,20 +345,20 @@ const Users = () => {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="px-2 py-2 text-center">
                         {user.latestBMI ? (
-                          <Badge variant="outline" className="font-mono text-xs">
+                          <Badge variant="outline" className="font-mono text-xs px-1.5 py-0.5">
                             {user.latestBMI.screenId}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center text-muted-foreground text-sm">
+                      <TableCell className="px-2 py-2 text-center whitespace-nowrap text-muted-foreground">
                         {user.latestBMI ? (
                           new Date(user.latestBMI.timestamp).toLocaleDateString()
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span>-</span>
                         )}
                       </TableCell>
                     </TableRow>

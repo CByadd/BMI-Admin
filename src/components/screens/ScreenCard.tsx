@@ -39,20 +39,20 @@ interface ScreenCardProps {
 }
 
 const statusConfig = {
-  online: { 
-    color: "bg-success/10 text-success border-success/20", 
+  online: {
+    color: "bg-success/10 text-success border-success/20",
     label: "Online",
-    dotColor: "bg-success" 
+    dotColor: "bg-success"
   },
-  offline: { 
-    color: "bg-danger/10 text-danger border-danger/20", 
+  offline: {
+    color: "bg-danger/10 text-danger border-danger/20",
     label: "Offline",
-    dotColor: "bg-danger" 
+    dotColor: "bg-danger"
   },
-  maintenance: { 
-    color: "bg-warning/10 text-warning border-warning/20", 
+  maintenance: {
+    color: "bg-warning/10 text-warning border-warning/20",
     label: "Maintenance",
-    dotColor: "bg-warning" 
+    dotColor: "bg-warning"
   },
 };
 
@@ -63,7 +63,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
   const config = statusConfig[screen.status];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAssignPlaylistOpen, setIsAssignPlaylistOpen] = useState(false);
-  
+
   const assignedPlaylist = screen.playlistId ? getPlaylist(screen.playlistId) : null;
 
   const handlePlaylistAssigned = async () => {
@@ -159,7 +159,7 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
               </div>
             </div>
           )}
-          
+
           {/* Assigned Playlist */}
           <div className="flex items-center justify-between">
             <Label className="text-xs text-muted-foreground flex items-center gap-1">
@@ -213,30 +213,30 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button 
-            className="flex-1" 
+          <Button
+            className="flex-1"
             variant="outline"
             onClick={() => setIsAssignPlaylistOpen(true)}
           >
-            <ListVideo className="w-4 h-4 mr-2" />
-            Assign Playlist
+            <ListVideo className="w-4 h-4 mr-2 shrink-0" />
+            <span className="hidden 2xl:inline">Assign Playlist</span>
           </Button>
-          <Button 
-            className="flex-1" 
+          <Button
+            className="flex-1"
             variant="outline"
             onClick={() => navigate(`/screens/${screen.id}`)}
           >
             <Eye className="w-4 h-4 mr-2" />
             View
           </Button>
-          <Button 
+          <Button
             variant="outline"
             size="icon"
             onClick={() => navigate(`/screens/${screen.id}/edit`)}
           >
             <Edit className="w-4 h-4" />
           </Button>
-          <Button 
+          <Button
             variant="outline"
             size="icon"
             onClick={() => setIsDeleteOpen(true)}

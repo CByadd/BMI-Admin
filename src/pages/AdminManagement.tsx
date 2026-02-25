@@ -367,25 +367,25 @@ const AdminManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto">
+          <Table className="text-xs sm:text-sm min-w-[900px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>SMS limit</TableHead>
-                <TableHead>SMS used</TableHead>
-                <TableHead>WhatsApp limit</TableHead>
-                <TableHead>WhatsApp used</TableHead>
-                <TableHead>Assigned Screens</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">Name</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">Email</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">Role</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">Status</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">SMS limit</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">SMS used</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">WA limit</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">WA used</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">Screens</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap">Created</TableHead>
+                <TableHead className="px-2 py-2 text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {                admins.length === 0 ? (
+              {admins.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     No admins found
@@ -394,33 +394,33 @@ const AdminManagement = () => {
               ) : (
                 admins.map((admin) => (
                   <TableRow key={admin.id}>
-                    <TableCell className="font-medium">{admin.name}</TableCell>
-                    <TableCell>{admin.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={admin.role === "super_admin" ? "default" : "secondary"}>
-                        {admin.role === "super_admin" ? "Super Admin" : "Admin"}
+                    <TableCell className="px-2 py-2 font-medium whitespace-nowrap">{admin.name}</TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap max-w-[160px] truncate">{admin.email}</TableCell>
+                    <TableCell className="px-2 py-2">
+                      <Badge variant={admin.role === "super_admin" ? "default" : "secondary"} className="text-xs px-1.5 py-0.5 whitespace-nowrap">
+                        {admin.role === "super_admin" ? "Super" : "Admin"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={admin.isActive ? "default" : "destructive"}>
+                    <TableCell className="px-2 py-2">
+                      <Badge variant={admin.isActive ? "default" : "destructive"} className="text-xs px-1.5 py-0.5">
                         {admin.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalMessageLimit != null ? (
                         <div className="flex items-center gap-1">
                           <span>{admin.totalMessageLimit}</span>
                           {admin.smsUsedCount != null && admin.totalMessageLimit != null && admin.smsUsedCount >= admin.totalMessageLimit && (
-                            <Badge variant="destructive" className="text-xs">⚠️</Badge>
+                            <Badge variant="destructive" className="text-xs px-1 py-0">⚠️</Badge>
                           )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalMessageLimit != null ? (
@@ -432,21 +432,21 @@ const AdminManagement = () => {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalWhatsAppLimit != null ? (
                         <div className="flex items-center gap-1">
                           <span>{admin.totalWhatsAppLimit}</span>
                           {admin.whatsappUsedCount != null && admin.totalWhatsAppLimit != null && admin.whatsappUsedCount >= admin.totalWhatsAppLimit && (
-                            <Badge variant="destructive" className="text-xs">⚠️</Badge>
+                            <Badge variant="destructive" className="text-xs px-1 py-0">⚠️</Badge>
                           )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalWhatsAppLimit != null ? (
@@ -458,42 +458,45 @@ const AdminManagement = () => {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap">
                       {admin.role === "super_admin" ? (
-                        <span className="text-muted-foreground">All screens</span>
+                        <span className="text-muted-foreground">All</span>
                       ) : (
-                        <span>{admin.assignedScreenIds?.length || 0} screen(s)</span>
+                        <span>{admin.assignedScreenIds?.length || 0}</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap">
                       {new Date(admin.createdAt).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <TableCell className="px-2 py-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 p-0"
                           onClick={() => handleOpenDialog(admin)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3.5 w-3.5" />
                         </Button>
                         {admin.id !== user?.id && admin.role === "admin" && (
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="h-7 w-7 p-0"
                             onClick={() => handleResetUsage(admin)}
                             title="Reset usage and limits"
                           >
-                            <RotateCcw className="h-4 w-4" />
+                            <RotateCcw className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {admin.id !== user?.id && (
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="h-7 w-7 p-0"
                             onClick={() => handleDelete(admin)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
                         )}
                       </div>
@@ -639,7 +642,7 @@ const AdminManagement = () => {
                                   </span>
                                 )}
                               </Label>
-                              {formData.screenIds.includes(screen.screenId) && (
+                              {/* {formData.screenIds.includes(screen.screenId) && (
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <div className="flex items-center gap-1">
                                     <Label className="text-xs text-muted-foreground whitespace-nowrap">SMS:</Label>
@@ -670,7 +673,7 @@ const AdminManagement = () => {
                                     />
                                   </div>
                                 </div>
-                              )}
+                              )} */}
                             </div>
                           ))
                         )}
