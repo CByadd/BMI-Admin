@@ -246,7 +246,6 @@ const ScreenCard = ({ screen, onEdit, onDelete }: ScreenCardProps) => {
         </div>
       </div>
 
-
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

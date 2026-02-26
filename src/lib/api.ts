@@ -279,7 +279,7 @@ export const api = {
   },
   getCurrentUser: () => apiRequest('GET', API_ENDPOINTS.AUTH.ME),
   registerAdmin: (adminData: any) => apiRequest('POST', API_ENDPOINTS.AUTH.REGISTER_ADMIN, adminData),
-  getAllAdmins: () => apiRequest('GET', API_ENDPOINTS.AUTH.GET_ALL_ADMINS),
+  getAllAdmins: () => apiRequest<{ admins: any[] }>('GET', API_ENDPOINTS.AUTH.GET_ALL_ADMINS),
   updateAdmin: (id: string, adminData: any) => apiRequest('PUT', API_ENDPOINTS.AUTH.UPDATE_ADMIN(id), adminData),
   deleteAdmin: (id: string) => apiRequest('DELETE', API_ENDPOINTS.AUTH.DELETE_ADMIN(id)),
   assignScreens: (id: string, screenIds: string[]) => apiRequest('POST', API_ENDPOINTS.AUTH.ASSIGN_SCREENS(id), { screenIds }),

@@ -12,6 +12,7 @@ import ScreenCardSkeleton from "@/components/screens/ScreenCardSkeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import api from "@/lib/api";
+import * as XLSX from "xlsx";
 
 interface Screen {
   id: string;
@@ -33,6 +34,7 @@ const Screens = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showEmptyState, setShowEmptyState] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,9 +89,68 @@ const Screens = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    try {
+      setIsExporting(true);
+
+      const exportData = filteredScreens.map((screen, index) => ({
+        '#': index + 1,
+        'Screen Name': screen.name || 'Unnamed Screen',
+        'Screen ID': screen.id,
+        'Location': screen.location || 'Not Specified',
+        'Status': screen.status,
+        'Model': screen.model || '-',
+        'Last Sync': screen.lastSync ? new Date(screen.lastSync).toLocaleString() : '-',
+        'Playlist ID': screen.playlistId || 'None',
+        'Flow Type': screen.flowType || '-',
+        'Today Users': screen.todayUsers || 0,
+        'Total Users': screen.totalUsers || 0,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Simple column widths
+      ws['!cols'] = [
+        { wch: 5 },   // #
+        { wch: 25 },  // Screen Name
+        { wch: 25 },  // Screen ID
+        { wch: 20 },  // Location
+        { wch: 12 },  // Status
+        { wch: 15 },  // Model
+        { wch: 20 },  // Last Sync
+        { wch: 20 },  // Playlist ID
+        { wch: 15 },  // Flow Type
+        { wch: 12 },  // Today Users
+        { wch: 12 },  // Total Users
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Screens');
+
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `screens_export_${date}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Export successful",
+        description: `Exported ${exportData.length} screens to ${filename}`,
+      });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export failed",
+        description: error.message || "Failed to export screens",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const filteredScreens = screens.filter((screen) => {
     const matchesSearch = screen.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         screen.id.toLowerCase().includes(searchQuery.toLowerCase());
+      screen.id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || screen.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -109,7 +170,7 @@ const Screens = () => {
               </div>
             ))}
           </div>
-          
+
           {/* Screen Cards Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -137,44 +198,58 @@ const Screens = () => {
       </div> */}
 
       {!hasScreens && !isLoadingScreens ? (
-          <ScreenEmptyState onConnect={() => setIsModalOpen(true)} />
-        ) : (
-          <div className="space-y-6">
-            {/* Actions Bar */}
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                <div className="flex-1 w-full sm:max-w-md">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by screen name or ID..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-[150px]">
-                      <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Filter status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="online">Online</SelectItem>
-                      <SelectItem value="offline">Offline</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" className="hidden sm:flex">
-                    <Download className="w-4 h-4 mr-2" />
-                    <span className="hidden md:inline">Export CSV</span>
-                    <span className="md:hidden">Export</span>
-                  </Button>
+        <ScreenEmptyState onConnect={() => setIsModalOpen(true)} />
+      ) : (
+        <div className="space-y-6">
+          {/* Actions Bar */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+              <div className="flex-1 w-full sm:max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by screen name or ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
                 </div>
               </div>
-              {/* <Button 
+              <div className="flex gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filter status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="offline">Offline</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  className="hidden sm:flex"
+                  onClick={handleExportCSV}
+                  disabled={isExporting || filteredScreens.length === 0}
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      <span className="hidden md:inline">Export CSV</span>
+                      <span className="md:hidden">Export</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            {/* <Button 
                 className="bg-gradient-primary hover:opacity-90 w-full sm:hidden"
                 onClick={() => setIsModalOpen(true)}
               >
@@ -188,81 +263,81 @@ const Screens = () => {
                 <Plus className="w-4 h-4 mr-2" />
                 Connect Screen
               </Button> */}
-            </div>
+          </div>
 
-            {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {isLoadingScreens && screens.length === 0 ? (
-                // Show skeleton stats while loading
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="p-4 bg-card rounded-lg border border-border">
-                    <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
-                    <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-                  </div>
-                ))
-              ) : (
-                // Show actual stats
-                <>
-                  <div className="p-4 bg-card rounded-lg border border-border">
-                    <p className="text-sm text-muted-foreground">Total Screens</p>
-                    <p className="text-3xl font-bold text-foreground mt-1">{screens.length}</p>
-                  </div>
-                  <div className="p-4 bg-card rounded-lg border border-border">
-                    <p className="text-sm text-muted-foreground">Online</p>
-                    <p className="text-3xl font-bold text-success mt-1">
-                      {screens.filter(s => s.status === "online").length}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-card rounded-lg border border-border">
-                    <p className="text-sm text-muted-foreground">Offline</p>
-                    <p className="text-3xl font-bold text-danger mt-1">
-                      {screens.filter(s => s.status === "offline").length}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-card rounded-lg border border-border">
-                    <p className="text-sm text-muted-foreground">Maintenance</p>
-                    <p className="text-3xl font-bold text-warning mt-1">
-                      {screens.filter(s => s.status === "maintenance").length}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Screen Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {isLoadingScreens && screens.length === 0 ? (
-                // Show skeletons while loading
-                Array.from({ length: 6 }).map((_, i) => (
-                  <ScreenCardSkeleton key={i} />
-                ))
-              ) : (
-                // Show actual screens
-                filteredScreens.map((screen) => (
-                  <ScreenCard 
-                    key={screen.id} 
-                    screen={screen}
-                    onEdit={handleEditScreen}
-                    onDelete={handleDeleteScreen}
-                  />
-                ))
-              )}
-            </div>
-
-            {filteredScreens.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No screens found matching your filters</p>
-              </div>
+          {/* Stats Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {isLoadingScreens && screens.length === 0 ? (
+              // Show skeleton stats while loading
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 bg-card rounded-lg border border-border">
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
+                  <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                </div>
+              ))
+            ) : (
+              // Show actual stats
+              <>
+                <div className="p-4 bg-card rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">Total Screens</p>
+                  <p className="text-3xl font-bold text-foreground mt-1">{screens.length}</p>
+                </div>
+                <div className="p-4 bg-card rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">Online</p>
+                  <p className="text-3xl font-bold text-success mt-1">
+                    {screens.filter(s => s.status === "online").length}
+                  </p>
+                </div>
+                <div className="p-4 bg-card rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">Offline</p>
+                  <p className="text-3xl font-bold text-danger mt-1">
+                    {screens.filter(s => s.status === "offline").length}
+                  </p>
+                </div>
+                <div className="p-4 bg-card rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">Maintenance</p>
+                  <p className="text-3xl font-bold text-warning mt-1">
+                    {screens.filter(s => s.status === "maintenance").length}
+                  </p>
+                </div>
+              </>
             )}
           </div>
-        )}
 
-        {/* Connect Screen Modal */}
-        <ConnectScreenModal
-          open={isModalOpen}
-          onOpenChange={setIsModalOpen}
-          onConnect={handleConnectScreen}
-        />
+          {/* Screen Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoadingScreens && screens.length === 0 ? (
+              // Show skeletons while loading
+              Array.from({ length: 6 }).map((_, i) => (
+                <ScreenCardSkeleton key={i} />
+              ))
+            ) : (
+              // Show actual screens
+              filteredScreens.map((screen) => (
+                <ScreenCard
+                  key={screen.id}
+                  screen={screen}
+                  onEdit={handleEditScreen}
+                  onDelete={handleDeleteScreen}
+                />
+              ))
+            )}
+          </div>
+
+          {filteredScreens.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No screens found matching your filters</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Connect Screen Modal */}
+      <ConnectScreenModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onConnect={handleConnectScreen}
+      />
     </div>
   );
 };

@@ -25,6 +25,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
 interface Admin {
   id: string;
@@ -37,7 +39,13 @@ interface Admin {
   smsUsedCount?: number;
   whatsappUsedCount?: number;
   assignedScreenIds?: string[];
-  screenLimits?: { screenId: string; messageLimit: number | null; whatsappLimit?: number | null }[];
+  screenLimits?: {
+    screenId: string;
+    messageLimit: number | null;
+    whatsappLimit?: number | null;
+    smsEnabled?: boolean;
+    whatsappEnabled?: boolean;
+  }[];
   createdAt: string;
 }
 
@@ -73,7 +81,13 @@ const AdminManagement = () => {
     totalMessageLimit: "" as string | number,
     totalWhatsAppLimit: "" as string | number,
     screenIds: [] as string[],
-    screenLimits: [] as { screenId: string; messageLimit: number | null; whatsappLimit?: number | null }[],
+    screenLimits: [] as {
+      screenId: string;
+      messageLimit: number | null;
+      whatsappLimit?: number | null;
+      smsEnabled?: boolean;
+      whatsappEnabled?: boolean;
+    }[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -121,7 +135,13 @@ const AdminManagement = () => {
     if (admin) {
       setIsEditMode(true);
       setSelectedAdmin(admin);
-      const screenLimits = admin.screenLimits ?? (admin.assignedScreenIds ?? []).map((screenId) => ({ screenId, messageLimit: null as number | null, whatsappLimit: null as number | null }));
+      const screenLimits = admin.screenLimits ?? (admin.assignedScreenIds ?? []).map((screenId) => ({
+        screenId,
+        messageLimit: null as number | null,
+        whatsappLimit: null as number | null,
+        smsEnabled: true,
+        whatsappEnabled: true
+      }));
       setFormData({
         email: admin.email,
         password: "",
@@ -130,7 +150,11 @@ const AdminManagement = () => {
         totalMessageLimit: admin.totalMessageLimit ?? "",
         totalWhatsAppLimit: admin.totalWhatsAppLimit ?? "",
         screenIds: admin.assignedScreenIds || [],
-        screenLimits,
+        screenLimits: screenLimits.map(s => ({
+          ...s,
+          smsEnabled: s.smsEnabled ?? true,
+          whatsappEnabled: s.whatsappEnabled ?? true
+        })),
       });
     } else {
       setIsEditMode(false);
@@ -298,7 +322,13 @@ const AdminManagement = () => {
       const newScreenLimits = newScreenIds.includes(screenId)
         ? prev.screenLimits.some((s) => s.screenId === screenId)
           ? prev.screenLimits
-          : [...prev.screenLimits.filter((s) => newScreenIds.includes(s.screenId)), { screenId, messageLimit: existing?.messageLimit ?? null, whatsappLimit: existing?.whatsappLimit ?? null }]
+          : [...prev.screenLimits.filter((s) => newScreenIds.includes(s.screenId)), {
+            screenId,
+            messageLimit: existing?.messageLimit ?? null,
+            whatsappLimit: existing?.whatsappLimit ?? null,
+            smsEnabled: existing?.smsEnabled ?? true,
+            whatsappEnabled: existing?.whatsappEnabled ?? true
+          }]
         : prev.screenLimits.filter((s) => s.screenId !== screenId);
       return { ...prev, screenIds: newScreenIds, screenLimits: newScreenLimits };
     });
@@ -308,7 +338,16 @@ const AdminManagement = () => {
     setFormData((prev) => {
       const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
       const existing = prev.screenLimits.find((s) => s.screenId === screenId);
-      return { ...prev, screenLimits: [...rest, { screenId, messageLimit: value, whatsappLimit: existing?.whatsappLimit ?? null }] };
+      return {
+        ...prev, screenLimits: [...rest, {
+          ...existing,
+          screenId,
+          messageLimit: value,
+          whatsappLimit: existing?.whatsappLimit ?? null,
+          smsEnabled: existing?.smsEnabled ?? true,
+          whatsappEnabled: existing?.whatsappEnabled ?? true
+        }]
+      };
     });
   };
 
@@ -316,12 +355,53 @@ const AdminManagement = () => {
     setFormData((prev) => {
       const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
       const existing = prev.screenLimits.find((s) => s.screenId === screenId);
-      return { ...prev, screenLimits: [...rest, { screenId, messageLimit: existing?.messageLimit ?? null, whatsappLimit: value }] };
+      return {
+        ...prev, screenLimits: [...rest, {
+          ...existing,
+          screenId,
+          messageLimit: existing?.messageLimit ?? null,
+          whatsappLimit: value,
+          smsEnabled: existing?.smsEnabled ?? true,
+          whatsappEnabled: existing?.whatsappEnabled ?? true
+        }]
+      };
+    });
+  };
+
+  const setScreenSmsEnabled = (screenId: string, enabled: boolean) => {
+    setFormData((prev) => {
+      const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
+      const existing = prev.screenLimits.find((s) => s.screenId === screenId);
+      return {
+        ...prev, screenLimits: [...rest, {
+          ...existing,
+          screenId,
+          smsEnabled: enabled,
+          whatsappEnabled: existing?.whatsappEnabled ?? true
+        }]
+      };
+    });
+  };
+
+  const setScreenWhatsAppEnabled = (screenId: string, enabled: boolean) => {
+    setFormData((prev) => {
+      const rest = prev.screenLimits.filter((s) => s.screenId !== screenId);
+      const existing = prev.screenLimits.find((s) => s.screenId === screenId);
+      return {
+        ...prev, screenLimits: [...rest, {
+          ...existing,
+          screenId,
+          whatsappEnabled: enabled,
+          smsEnabled: existing?.smsEnabled ?? true
+        }]
+      };
     });
   };
 
   const getScreenLimit = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.messageLimit ?? null;
   const getScreenWhatsAppLimit = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.whatsappLimit ?? null;
+  const getScreenSmsEnabled = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.smsEnabled ?? true;
+  const getScreenWhatsAppEnabled = (screenId: string) => formData.screenLimits.find((s) => s.screenId === screenId)?.whatsappEnabled ?? true;
 
   if (user?.role !== "super_admin") {
     return (
@@ -616,67 +696,107 @@ const AdminManagement = () => {
                     <Label>Assign Screens</Label>
                     <ScrollArea className="h-64 border rounded-md p-4">
                       <div className="space-y-2">
-                        {screens.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            No screens available
-                          </p>
-                        ) : (
-                          screens.map((screen) => (
-                            <div
-                              key={screen.screenId}
-                              className="flex items-center gap-2 flex-wrap"
-                            >
-                              <Checkbox
-                                id={screen.screenId}
-                                checked={formData.screenIds.includes(screen.screenId)}
-                                onCheckedChange={() => toggleScreen(screen.screenId)}
-                              />
-                              <Label
-                                htmlFor={screen.screenId}
-                                className="text-sm font-normal cursor-pointer flex-1 min-w-0"
+                        {(() => {
+                          const otherAdminsAssignedIds = admins
+                            .filter(a => !selectedAdmin || a.id !== selectedAdmin.id)
+                            .reduce((acc, a) => [...acc, ...(a.assignedScreenIds || [])], [] as string[]);
+
+                          const availableScreens = screens.filter(s => !otherAdminsAssignedIds.includes(s.screenId));
+
+                          if (availableScreens.length === 0) {
+                            return (
+                              <p className="text-sm text-muted-foreground text-center py-4">
+                                No unassigned screens available
+                              </p>
+                            );
+                          }
+
+                          return availableScreens.map((screen) => {
+                            const isAssigned = formData.screenIds.includes(screen.screenId);
+
+                            return (
+                              <div
+                                key={screen.screenId}
+                                className="border rounded-md p-3 space-y-3 bg-card"
                               >
-                                {screen.deviceName || screen.screenId}
-                                {screen.location && (
-                                  <span className="text-muted-foreground ml-2">
-                                    ({screen.location})
-                                  </span>
-                                )}
-                              </Label>
-                              {/* {formData.screenIds.includes(screen.screenId) && (
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <div className="flex items-center gap-1">
-                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">SMS:</Label>
-                                    <Input
-                                      type="number"
-                                      min={0}
-                                      className="w-20 h-8"
-                                      placeholder="—"
-                                      value={getScreenLimit(screen.screenId) ?? ""}
-                                      onChange={(e) => {
-                                        const v = e.target.value;
-                                        setScreenMessageLimit(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">WhatsApp:</Label>
-                                    <Input
-                                      type="number"
-                                      min={0}
-                                      className="w-20 h-8"
-                                      placeholder="—"
-                                      value={getScreenWhatsAppLimit(screen.screenId) ?? ""}
-                                      onChange={(e) => {
-                                        const v = e.target.value;
-                                        setScreenWhatsAppLimit(screen.screenId, v === "" ? null : Math.max(0, parseInt(v, 10) || 0));
-                                      }}
-                                    />
-                                  </div>
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    id={screen.screenId}
+                                    checked={isAssigned}
+                                    onCheckedChange={() => toggleScreen(screen.screenId)}
+                                  />
+                                  <Label
+                                    htmlFor={screen.screenId}
+                                    className="text-sm font-medium cursor-pointer flex-1 min-w-0"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate">
+                                        {screen.deviceName || screen.screenId}
+                                      </span>
+                                      {screen.location && (
+                                        <span className="text-muted-foreground text-xs truncate">
+                                          • {screen.location}
+                                        </span>
+                                      )}
+                                      {isAssigned && selectedAdmin && selectedAdmin.assignedScreenIds?.includes(screen.screenId) && (
+                                        <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1 bg-primary/5 text-primary border-primary/20 shrink-0">
+                                          Assigned
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </Label>
                                 </div>
-                              )} */}
-                            </div>
-                          ))
-                        )}
+
+                                {isAssigned && (
+                                  <div className="pl-7 space-y-4 pt-2 border-t border-border/40">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <Label className="text-xs">SMS</Label>
+                                          <Switch
+                                            checked={getScreenSmsEnabled(screen.screenId)}
+                                            onCheckedChange={(checked) => setScreenSmsEnabled(screen.screenId, checked)}
+                                          />
+                                        </div>
+                                        <Input
+                                          type="number"
+                                          placeholder="SMS Limit"
+                                          className="h-8 text-xs"
+                                          disabled={!getScreenSmsEnabled(screen.screenId)}
+                                          value={getScreenLimit(screen.screenId) ?? ""}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setScreenMessageLimit(screen.screenId, v === "" ? null : parseInt(v, 10));
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <Label className="text-xs">WhatsApp</Label>
+                                          <Switch
+                                            checked={getScreenWhatsAppEnabled(screen.screenId)}
+                                            onCheckedChange={(checked) => setScreenWhatsAppEnabled(screen.screenId, checked)}
+                                          />
+                                        </div>
+                                        <Input
+                                          type="number"
+                                          placeholder="WA Limit"
+                                          className="h-8 text-xs"
+                                          disabled={!getScreenWhatsAppEnabled(screen.screenId)}
+                                          value={getScreenWhatsAppLimit(screen.screenId) ?? ""}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setScreenWhatsAppLimit(screen.screenId, v === "" ? null : parseInt(v, 10));
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     </ScrollArea>
                     {formData.role === "admin" && formData.screenIds.length > 0 && (

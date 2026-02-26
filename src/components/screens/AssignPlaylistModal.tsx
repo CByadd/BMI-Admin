@@ -8,6 +8,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import api from "@/lib/api";
@@ -39,9 +48,9 @@ const AssignPlaylistModal = ({ open, onOpenChange, screenId, onAssign }: AssignP
         try {
           // Refresh playlists if needed
           await refreshPlaylists();
-          
+
           // Get current screen config to show current playlist
-          const playerResponse = await api.getPlayer(screenId);
+          const playerResponse = await api.getPlayer(screenId) as any;
           if (playerResponse.ok && playerResponse.player) {
             const currentPlaylist = playerResponse.player.playlistId;
             setCurrentPlaylistId(currentPlaylist || null);
@@ -81,21 +90,21 @@ const AssignPlaylistModal = ({ open, onOpenChange, screenId, onAssign }: AssignP
     try {
       // Use updateScreenConfig API (same as EditScreenModal)
       const playlistIdToSend = selectedPlaylist && selectedPlaylist !== "none" ? selectedPlaylist : null;
-      
+
       await api.updateScreenConfig(screenId, {
         playlistId: playlistIdToSend,
       });
 
       toast({
         title: "Success",
-        description: playlistIdToSend 
-          ? "Playlist assigned successfully." 
+        description: playlistIdToSend
+          ? "Playlist assigned successfully."
           : "Playlist removed successfully.",
       });
-      
+
       // Refresh screens to update the UI
       await refreshScreens();
-      
+
       onAssign?.();
       onOpenChange(false);
     } catch (error: any) {
@@ -126,38 +135,62 @@ const AssignPlaylistModal = ({ open, onOpenChange, screenId, onAssign }: AssignP
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {currentPlaylistId 
-                ? "Select a playlist to assign to this screen. Current assignment is highlighted."
-                : "Select a playlist to assign to this screen."}
-            </p>
-            <div className="grid gap-2 max-h-[400px] overflow-y-auto">
-              <Button
-                variant={selectedPlaylist === "none" || selectedPlaylist === null ? "secondary" : "outline"}
-                onClick={() => setSelectedPlaylist("none")}
-                className="justify-start"
-              >
-                {currentPlaylistId ? "Remove Playlist (None)" : "None (No Playlist)"}
-              </Button>
-              {playlists.map((playlist) => (
-                <Button
-                  key={playlist.id}
-                  variant={selectedPlaylist === playlist.id ? "secondary" : "outline"}
-                  onClick={() => setSelectedPlaylist(playlist.id)}
-                  className="justify-start"
-                >
-                  {playlist.name}
-                  {currentPlaylistId === playlist.id && (
-                    <span className="ml-2 text-xs text-muted-foreground">(Current)</span>
-                  )}
-                </Button>
-              ))}
-              {playlists.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No playlists available. Create a playlist first.
-                </p>
+          <div className="space-y-6">
+            {/* Current Assignment Display */}
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Music className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Current Playlist</p>
+                  <p className="font-semibold text-foreground">
+                    {currentPlaylistId
+                      ? playlists.find(p => p.id === currentPlaylistId)?.name || "Unknown Playlist"
+                      : "No Playlist Assigned"}
+                  </p>
+                </div>
+              </div>
+              {currentPlaylistId && (
+                <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                  Active
+                </Badge>
               )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Assign New Playlist</label>
+                <Select
+                  value={selectedPlaylist || "none"}
+                  onValueChange={(value) => setSelectedPlaylist(value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a playlist" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      {currentPlaylistId ? "Remove Playlist (None)" : "None (No Playlist)"}
+                    </SelectItem>
+                    {playlists.map((playlist) => (
+                      <SelectItem key={playlist.id} value={playlist.id}>
+                        {playlist.name}
+                        {currentPlaylistId === playlist.id && " (Current)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {playlists.length === 0 && (
+                  <p className="text-xs text-danger mt-1">
+                    No playlists available. Please create one in the Playlists section.
+                  </p>
+                )}
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Select a playlist from the dropdown above to assign it to this screen.
+                You can also choose "Remove" to clear the current assignment.
+              </p>
             </div>
           </div>
         )}

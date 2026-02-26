@@ -100,15 +100,19 @@ const MessageLimits = () => {
     });
   };
 
-  const totalAllocated = screenLimits.reduce((sum, s) => sum + (s.messageLimit ?? 0), 0);
+  const totalAllocated = screens.reduce((sum, s) => sum + (getLimitForScreen(s.screenId) ?? 0), 0);
   const totalCap = totalLimit ?? 0;
-  const totalWhatsAppAllocated = screenLimits.reduce((sum, s) => sum + (s.whatsappLimit ?? 0), 0);
+  const totalWhatsAppAllocated = screens.reduce((sum, s) => sum + (getWhatsAppLimitForScreen(s.screenId) ?? 0), 0);
   const totalWhatsAppCap = totalWhatsAppLimit ?? 0;
-  const isValid = (totalCap === 0 || totalAllocated <= totalCap) && (totalWhatsAppCap === 0 || totalWhatsAppAllocated <= totalWhatsAppCap);
+
+  // A limit is only valid if allocated amount <= total capacity and neither are negative
+  const isValid = totalAllocated <= totalCap && totalWhatsAppAllocated <= totalWhatsAppCap;
 
   const handleSave = async () => {
     if (!user?.id) return;
-    if (totalCap > 0 && totalAllocated > totalCap) {
+
+    // Safety check: verify totals again before saving
+    if (totalAllocated > totalCap) {
       toast({
         title: "Invalid allocation",
         description: `SMS total allocated (${totalAllocated}) cannot exceed your total SMS limit (${totalCap}).`,
@@ -116,7 +120,7 @@ const MessageLimits = () => {
       });
       return;
     }
-    if (totalWhatsAppCap > 0 && totalWhatsAppAllocated > totalWhatsAppCap) {
+    if (totalWhatsAppAllocated > totalWhatsAppCap) {
       toast({
         title: "Invalid allocation",
         description: `WhatsApp total allocated (${totalWhatsAppAllocated}) cannot exceed your total WhatsApp limit (${totalWhatsAppCap}).`,
@@ -193,8 +197,8 @@ const MessageLimits = () => {
             {smsLimitReached && whatsappLimitReached
               ? "You have used all your SMS and WhatsApp limits. Ask super admin to reset and update the limits."
               : smsLimitReached
-              ? "You have used all your SMS limits. Ask super admin to reset and update the limit."
-              : "You have used all your WhatsApp limits. Ask super admin to reset and update the limit."}
+                ? "You have used all your SMS limits. Ask super admin to reset and update the limit."
+                : "You have used all your WhatsApp limits. Ask super admin to reset and update the limit."}
           </AlertDescription>
         </Alert>
       )}
@@ -207,8 +211,8 @@ const MessageLimits = () => {
               {totalCap === 0
                 ? "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."
                 : totalLimit != null && totalLimit > 0 && smsUsedCount >= totalLimit
-                ? "⚠️ You have used all your SMS limits. Ask super admin to reset and update the limit."
-                : "Set by the super admin. Divide across screens below."}
+                  ? "⚠️ You have used all your SMS limits. Ask super admin to reset and update the limit."
+                  : "Set by the super admin. Divide across screens below."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -238,8 +242,8 @@ const MessageLimits = () => {
               {totalWhatsAppCap === 0
                 ? "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."
                 : totalWhatsAppLimit != null && totalWhatsAppLimit > 0 && whatsappUsedCount >= totalWhatsAppLimit
-                ? "⚠️ You have used all your WhatsApp limits. Ask super admin to reset and update the limit."
-                : "Set by the super admin. Divide across screens below."}
+                  ? "⚠️ You have used all your WhatsApp limits. Ask super admin to reset and update the limit."
+                  : "Set by the super admin. Divide across screens below."}
             </CardDescription>
           </CardHeader>
           <CardContent>

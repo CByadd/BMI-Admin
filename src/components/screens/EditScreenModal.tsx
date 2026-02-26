@@ -319,6 +319,32 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         await handleLogoUpload();
       }
 
+      // Validate message limits if user is an admin
+      if (user?.role === "admin") {
+        const totalSmsLimit = (user as any).totalMessageLimit != null ? Number((user as any).totalMessageLimit) : 0;
+        const totalWhatsAppLimit = (user as any).totalWhatsAppLimit != null ? Number((user as any).totalWhatsAppLimit) : 0;
+
+        if (formData.smsLimitPerScreen !== null && formData.smsLimitPerScreen > totalSmsLimit) {
+          toast({
+            title: "Limit Exceeded",
+            description: `Screen SMS limit (${formData.smsLimitPerScreen}) cannot exceed your account total limit of ${totalSmsLimit}.`,
+            variant: "destructive",
+          });
+          setIsSaving(false);
+          return;
+        }
+
+        if (formData.whatsappLimitPerScreen !== null && formData.whatsappLimitPerScreen > totalWhatsAppLimit) {
+          toast({
+            title: "Limit Exceeded",
+            description: `Screen WhatsApp limit (${formData.whatsappLimitPerScreen}) cannot exceed your account total limit of ${totalWhatsAppLimit}.`,
+            variant: "destructive",
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       // Update screen configuration via API (without flowType - it's static)
       // Include playlistId and date range in the update
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
