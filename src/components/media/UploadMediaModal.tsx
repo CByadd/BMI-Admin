@@ -30,12 +30,20 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     }
   };
 
-  const MAX_FILE_SIZE = 1.3 * 1024 * 1024; // 1.3 MB per file (single or multiple)
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB for images
+  const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10 MB for videos
 
   const checkFileSize = (file: File): { ok: boolean; message?: string } => {
-    if (file.size > MAX_FILE_SIZE) {
+    const isVideo = file.type.startsWith("video/");
+    const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    const limitMb = isVideo ? 10 : 5;
+
+    if (file.size > limit) {
       const mb = (file.size / (1024 * 1024)).toFixed(2);
-      return { ok: false, message: `${file.name} is too large (${mb} MB). Each file must be less than 1.3 MB.` };
+      return {
+        ok: false,
+        message: `${file.name} is too large (${mb} MB). ${isVideo ? 'Videos' : 'Images'} must be less than ${limitMb} MB.`
+      };
     }
     return { ok: true };
   };
@@ -111,24 +119,24 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
 
     try {
       setUploading(true);
-      
+
       // Create FormData for file upload
       const formData = new FormData();
       files.forEach((file) => {
         formData.append('files', file);
       });
-      
+
       if (name) {
         formData.append('name', name);
       }
-      
+
       if (tags) {
         formData.append('tags', tags);
       }
 
       // Upload to server
       const response = await api.uploadMedia(formData);
-      
+
       if (response.ok) {
         toast({
           title: "Upload successful",
@@ -181,11 +189,10 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
           <div className="space-y-2">
             <Label>Upload File(s)</Label>
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border hover:border-primary/50'
-              }`}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
+                }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -196,7 +203,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                 Drag & drop files here, or click to browse
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                Supported: JPG, PNG, MP4, MOV. Each file must be less than 1.3 MB.
+                Supported: JPG, PNG, MP4, MOV. Limits: Images 5 MB, Videos 10 MB.
               </p>
               <input
                 type="file"
@@ -206,8 +213,8 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                 className="hidden"
                 id="file-upload"
               />
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => document.getElementById('file-upload')?.click()}
               >
                 Browse Files
@@ -223,8 +230,10 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                 {files.map((file, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                     {getFileIcon(file)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{file.name}</p>
+                    <div className="flex-1 min-w-0 pr-2">
+                      <p className="text-sm font-medium truncate" title={file.name}>
+                        {file.name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {formatFileSize(file.size)} • {file.type.split('/')[0]}
                       </p>
@@ -232,6 +241,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="flex-shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
                       onClick={() => removeFile(index)}
                     >
                       <X className="w-4 h-4" />
@@ -266,14 +276,14 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
         </div>
 
         <DialogFooter>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={uploading}
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleUpload}
             disabled={uploading || files.length === 0}
           >

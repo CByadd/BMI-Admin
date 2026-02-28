@@ -126,19 +126,19 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
           heightCalibration: null,
           heightCalibrationEnabled: true,
           paymentAmount: null,
-        hideScreenId: false,
-        smsEnabled: false,
-        smsLimitPerScreen: null,
-        smsSentCount: 0,
-        whatsappEnabled: false,
-        whatsappLimitPerScreen: null,
-        whatsappSentCount: 0,
-      });
-      setLogoUrl(null);
-      setLogoPreview(null);
-      setLogoFile(null);
-    }
-  } catch (error) {
+          hideScreenId: false,
+          smsEnabled: false,
+          smsLimitPerScreen: null,
+          smsSentCount: 0,
+          whatsappEnabled: false,
+          whatsappLimitPerScreen: null,
+          whatsappSentCount: 0,
+        });
+        setLogoUrl(null);
+        setLogoPreview(null);
+        setLogoFile(null);
+      }
+    } catch (error) {
       console.error("Error loading current playlist:", error);
       // Initialize with screen data on error
       setFormData({
@@ -198,17 +198,17 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         });
         return;
       }
-      
-      // Validate file size (1.3 MB max per file)
-      if (file.size > 1.3 * 1024 * 1024) {
+
+      // Validate file size (5 MB max per file)
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Logo file must be less than 1.3 MB",
+          description: "Logo file must be less than 5 MB",
           variant: "destructive",
         });
         return;
       }
-      
+
       setLogoFile(file);
       // Create preview
       const reader = new FileReader();
@@ -301,7 +301,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    
+
     try {
       // Validate date range if both dates are provided
       if (formData.playlistStartDate && formData.playlistEndDate && formData.playlistEndDate < formData.playlistStartDate) {
@@ -348,7 +348,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
       // Update screen configuration via API (without flowType - it's static)
       // Include playlistId and date range in the update
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
-      
+
       const isF2 = (screen.flowType ?? "").toString().toLowerCase() === "f2";
       // Omit paymentAmount for F2 (not used); include SMS settings for all screens
       const configPayload: any = {
@@ -364,16 +364,16 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         whatsappEnabled: formData.whatsappEnabled,
         whatsappLimitPerScreen: formData.whatsappLimitPerScreen !== null && formData.whatsappLimitPerScreen !== undefined ? formData.whatsappLimitPerScreen : null,
       };
-      
+
       // Always include playlist fields - send null to clear, or values to set
       // IMPORTANT: Always send playlistId (even if null) so backend knows to process it
       configPayload.playlistId = playlistIdToSend;
       configPayload.playlistStartDate = formData.playlistStartDate ? formData.playlistStartDate.toISOString() : null;
       configPayload.playlistEndDate = formData.playlistEndDate ? formData.playlistEndDate.toISOString() : null;
-      
+
       console.log("Saving screen config:", configPayload);
-      console.log("SMS/WhatsApp toggles:", { 
-        smsEnabled: formData.smsEnabled, 
+      console.log("SMS/WhatsApp toggles:", {
+        smsEnabled: formData.smsEnabled,
         whatsappEnabled: formData.whatsappEnabled,
         smsLimitPerScreen: formData.smsLimitPerScreen,
         whatsappLimitPerScreen: formData.whatsappLimitPerScreen
@@ -384,7 +384,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         playlistEndDate: configPayload.playlistEndDate,
         hasPlaylist: !!configPayload.playlistId
       });
-      
+
       const response = await api.updateScreenConfig(screen.id, configPayload);
       console.log("Screen config update response:", response);
 
@@ -392,7 +392,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
       if (configPayload.playlistId) {
         const verifyResponse = await api.getPlayer(screen.id);
         console.log("Verification - current playlist assignment:", verifyResponse.player?.playlistId);
-        
+
         if (verifyResponse.player?.playlistId !== configPayload.playlistId) {
           console.warn("WARNING: Playlist assignment may not have saved correctly!");
           toast({
@@ -421,10 +421,10 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
         status: formData.isActive ? (screen.status === "offline" ? "online" : screen.status) : "offline",
       };
       updateScreen(screen.id, updatedScreenData);
-      
+
       // Refresh to get latest data from server
       await refreshScreens();
-      
+
       // Call onSave with updated data
       onSave(updatedScreenData);
 
@@ -481,7 +481,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 <Skeleton className="h-3 w-full" />
               </div>
             </div>
-            
+
             {/* Third row: Flow Type */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -490,7 +490,7 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
                 <Skeleton className="h-3 w-3/4" />
               </div>
             </div>
-            
+
             {/* Playlist Selection */}
             <div className="space-y-2">
               <Skeleton className="h-4 w-32" />
@@ -523,579 +523,579 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
             </div>
           </div>
         ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto flex-1">
-            {/* First row: Screen Name and Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Screen Name (Device Name)</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter screen name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Enter location"
-                />
-              </div>
-            </div>
-
-            {/* Second row: Height Calibration and Payment Amount (Payment hidden for F2) */}
-            <div className={`grid gap-4 ${(screen.flowType ?? "").toString().toLowerCase() === "f2" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
-              <div className="space-y-2">
-                <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
-                <Input
-                  id="heightCalibration"
-                  type="number"
-                  step="0.1"
-                  value={formData.heightCalibration ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData({ 
-                      ...formData, 
-                      heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
-                    });
-                  }}
-                  placeholder="Leave empty for default (0)"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
-                </p>
-                <div className="flex items-center justify-between space-x-2 pt-2">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="heightCalibrationEnabled" className="text-sm">Height Calibration Enabled</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Enable height calibration validation
-                    </p>
-                  </div>
-                  <Switch
-                    id="heightCalibrationEnabled"
-                    checked={formData.heightCalibrationEnabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto flex-1">
+              {/* First row: Screen Name and Location */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Screen Name (Device Name)</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter screen name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Enter location"
                   />
                 </div>
               </div>
-              {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
-              <div className="space-y-2">
-                <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
-                <Input
-                  id="paymentAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.paymentAmount ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData({ 
-                      ...formData, 
-                      paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
-                    });
-                  }}
-                  placeholder="Leave empty for default (₹9)"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
-                </p>
-              </div>
-              )}
-            </div>
 
-            {/* Logo Upload Section */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
-                <Label>Screen Logo</Label>
-                {logoUrl && !logoFile && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteLogo}
-                    disabled={isDeletingLogo}
-                  >
-                    {isDeletingLogo ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <X className="w-4 h-4 mr-2" />
-                        Delete Logo
-                      </>
-                    )}
-                  </Button>
+              {/* Second row: Height Calibration and Payment Amount (Payment hidden for F2) */}
+              <div className={`grid gap-4 ${(screen.flowType ?? "").toString().toLowerCase() === "f2" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
+                <div className="space-y-2">
+                  <Label htmlFor="heightCalibration">Height Calibration (cm)</Label>
+                  <Input
+                    id="heightCalibration"
+                    type="number"
+                    step="0.1"
+                    value={formData.heightCalibration ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({
+                        ...formData,
+                        heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                      });
+                    }}
+                    placeholder="Leave empty for default (0)"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Height calibration offset in cm. This value will be added/subtracted from sensor readings before BMI calculation. Use positive values to add, negative to subtract. Leave empty to use default (0).
+                  </p>
+                  <div className="flex items-center justify-between space-x-2 pt-2">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="heightCalibrationEnabled" className="text-sm">Height Calibration Enabled</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Enable height calibration validation
+                      </p>
+                    </div>
+                    <Switch
+                      id="heightCalibrationEnabled"
+                      checked={formData.heightCalibrationEnabled}
+                      onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
+                    />
+                  </div>
+                </div>
+                {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
+                    <Input
+                      id="paymentAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.paymentAmount ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData({
+                          ...formData,
+                          paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                        });
+                      }}
+                      placeholder="Leave empty for default (₹9)"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
+                    </p>
+                  </div>
                 )}
               </div>
-              <div className="flex flex-col gap-4">
-                {logoPreview && (
-                  <div className="relative inline-block">
-                    <img 
-                      src={logoPreview} 
-                      alt="Logo preview" 
-                      className="h-32 w-auto object-contain border border-border rounded-lg p-2 bg-muted"
-                    />
-                    {logoFile && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                        onClick={handleRemoveLogo}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoFileChange}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                  {logoFile && (
+
+              {/* Logo Upload Section */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <Label>Screen Logo</Label>
+                  {logoUrl && !logoFile && (
                     <Button
                       type="button"
-                      onClick={handleLogoUpload}
-                      disabled={isUploadingLogo}
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteLogo}
+                      disabled={isDeletingLogo}
                     >
-                      {isUploadingLogo ? (
+                      {isDeletingLogo ? (
                         <>
                           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                          Uploading...
+                          Deleting...
                         </>
                       ) : (
                         <>
-                          <Upload className="w-4 h-4 mr-2" />
-                          Upload Logo
+                          <X className="w-4 h-4 mr-2" />
+                          Delete Logo
                         </>
                       )}
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Upload a logo image for this screen. The logo will be displayed at the top of modals in the Android app. Maximum file size: 1.3 MB. Supported formats: JPG, PNG, GIF.
-                </p>
-              </div>
-            </div>
-            
-            {/* Third row: Flow Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="flowType">Flow Type</Label>
-                <Input
-                  id="flowType"
-                  value={screen.flowType || "Normal"}
-                  disabled
-                  className="bg-muted cursor-not-allowed"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Flow type is determined by the app version and cannot be changed here
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="playlist">Assign Playlist</Label>
-              {isLoadingPlaylists ? (
-                <>
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-3 w-2/3" />
-                </>
-              ) : (
-                <>
-                  <Select 
-                    value={formData.playlistId || "none"} 
-                    onValueChange={(value) => setFormData({ ...formData, playlistId: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a playlist" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None (No playlist assigned)</SelectItem>
-                      {playlists.map((playlist) => (
-                        <SelectItem key={playlist.id} value={playlist.id}>
-                          {playlist.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-col gap-4">
+                  {logoPreview && (
+                    <div className="relative inline-block">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="h-32 w-auto object-contain border border-border rounded-lg p-2 bg-muted"
+                      />
+                      {logoFile && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                          onClick={handleRemoveLogo}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoFileChange}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    {logoFile && (
+                      <Button
+                        type="button"
+                        onClick={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                      >
+                        {isUploadingLogo ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload Logo
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Select a playlist to assign to this screen
+                    Upload a logo image for this screen. The logo will be displayed at the top of modals in the Android app. Maximum file size: 5 MB. Supported formats: JPG, PNG, GIF.
                   </p>
+                </div>
+              </div>
+
+              {/* Third row: Flow Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="flowType">Flow Type</Label>
+                  <Input
+                    id="flowType"
+                    value={screen.flowType || "Normal"}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Flow type is determined by the app version and cannot be changed here
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="playlist">Assign Playlist</Label>
+                {isLoadingPlaylists ? (
+                  <>
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </>
+                ) : (
+                  <>
+                    <Select
+                      value={formData.playlistId || "none"}
+                      onValueChange={(value) => setFormData({ ...formData, playlistId: value === "none" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a playlist" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None (No playlist assigned)</SelectItem>
+                        {playlists.map((playlist) => (
+                          <SelectItem key={playlist.id} value={playlist.id}>
+                            {playlist.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Select a playlist to assign to this screen
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Date Range Configuration for Playlist */}
+              {formData.playlistId && formData.playlistId !== "none" && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <Label className="text-sm font-medium">Playlist Date Range (Optional)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Configure when this playlist should be active. Leave empty for always active.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="startDate" className="text-xs">Start Date</Label>
+                        {formData.playlistStartDate && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => setFormData({ ...formData, playlistStartDate: null })}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formData.playlistStartDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formData.playlistStartDate ? (
+                              format(formData.playlistStartDate, "PPP")
+                            ) : (
+                              <span>Pick a start date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={formData.playlistStartDate || undefined}
+                            onSelect={(date) => setFormData({ ...formData, playlistStartDate: date || null })}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="endDate" className="text-xs">End Date</Label>
+                        {formData.playlistEndDate && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => setFormData({ ...formData, playlistEndDate: null })}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formData.playlistEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formData.playlistEndDate ? (
+                              format(formData.playlistEndDate, "PPP")
+                            ) : (
+                              <span>Pick an end date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={formData.playlistEndDate || undefined}
+                            onSelect={(date) => setFormData({ ...formData, playlistEndDate: date || null })}
+                            initialFocus
+                            disabled={(date) => {
+                              if (formData.playlistStartDate) {
+                                return date < formData.playlistStartDate;
+                              }
+                              return false;
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {formData.playlistStartDate && formData.playlistEndDate && formData.playlistEndDate < formData.playlistStartDate && (
+                    <p className="text-xs text-destructive">
+                      End date must be after start date
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-between space-x-2 py-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isActive">Enable Screen</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable or disable this screen
+                  </p>
+                </div>
+                <Switch
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between space-x-2 py-2 border-t">
+                <div className="space-y-0.5">
+                  <Label htmlFor="hideScreenId">Hide Screen ID</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Hide the screen ID display in the top-left corner
+                  </p>
+                </div>
+                <Switch
+                  id="hideScreenId"
+                  checked={formData.hideScreenId}
+                  onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
+                />
+              </div>
+
+              {/* SMS after payment (for screens with payment flow) */}
+              {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
+                <>
+                  <div className={cn("space-y-4 pt-4 border-t-2 border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1 flex-1">
+                        <Label className="text-base font-semibold flex items-center gap-2">
+                          📱 SMS Messaging
+                          {formData.smsEnabled && (
+                            <Badge variant="default" className="text-xs">Enabled</Badge>
+                          )}
+                          {!formData.smsEnabled && smsEnabledForAccount && (
+                            <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                          )}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {smsEnabledForAccount
+                            ? user?.role === "super_admin"
+                              ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
+                              : "⚠️ IMPORTANT: Even though your admin account has SMS limits, you must toggle this ON for each screen to send SMS. When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
+                            : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
+                        </p>
+                        {!formData.smsEnabled && smsEnabledForAccount && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                            ⚠️ SMS is currently OFF for this screen. Toggle it ON to enable SMS sending.
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Switch
+                          id="smsEnabled"
+                          checked={formData.smsEnabled}
+                          onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
+                          disabled={!smsEnabledForAccount}
+                          className="scale-125"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {formData.smsEnabled ? "ON" : "OFF"}
+                        </span>
+                      </div>
+                    </div>
+                    {formData.smsEnabled && (
+                      <>
+                        {user?.role !== "super_admin" && (
+                          <div className="space-y-2">
+                            <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
+                            <Input
+                              id="smsLimitPerScreen"
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={formData.smsLimitPerScreen ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setFormData({
+                                  ...formData,
+                                  smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
+                                });
+                              }}
+                              placeholder="No limit"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Leave empty for no limit. Once reached, no more SMS until reset.
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <span className="text-sm text-muted-foreground">
+                            SMS sent: <strong>{formData.smsSentCount}</strong>
+                            {formData.smsLimitPerScreen != null && <span className="ml-1">/ {formData.smsLimitPerScreen}</span>}
+                            {user?.role === "super_admin" && formData.smsLimitPerScreen != null && (
+                              <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                            )}
+                          </span>
+                          {user?.role !== "super_admin" && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const r = await api.updateScreenConfig(screen.id, { resetSmsCount: true });
+                                  if (r && (r as any).ok !== false) {
+                                    setFormData((f) => ({ ...f, smsSentCount: 0 }));
+                                    toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
+                                    await refreshScreens();
+                                    loadCurrentPlaylist();
+                                  } else throw new Error((r as any)?.error || "Reset failed");
+                                } catch (err: any) {
+                                  toast({
+                                    title: "Reset failed",
+                                    description: err?.message || "Could not reset SMS count",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              Reset SMS count
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className={cn("space-y-4 pt-4 border-t-2 border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1 flex-1">
+                        <Label className="text-base font-semibold flex items-center gap-2">
+                          💬 WhatsApp Messaging
+                          {formData.whatsappEnabled && (
+                            <Badge variant="default" className="text-xs">Enabled</Badge>
+                          )}
+                          {!formData.whatsappEnabled && whatsappEnabledForAccount && (
+                            <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                          )}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {whatsappEnabledForAccount
+                            ? user?.role === "super_admin"
+                              ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
+                              : "⚠️ IMPORTANT: Even though your admin account has WhatsApp limits, you must toggle this ON for each screen to send WhatsApp. When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
+                            : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
+                        </p>
+                        {!formData.whatsappEnabled && whatsappEnabledForAccount && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                            ⚠️ WhatsApp is currently OFF for this screen. Toggle it ON to enable WhatsApp sending.
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Switch
+                          id="whatsappEnabled"
+                          checked={formData.whatsappEnabled}
+                          onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
+                          disabled={!whatsappEnabledForAccount}
+                          className="scale-125"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {formData.whatsappEnabled ? "ON" : "OFF"}
+                        </span>
+                      </div>
+                    </div>
+                    {formData.whatsappEnabled && (
+                      <>
+                        {user?.role !== "super_admin" && (
+                          <div className="space-y-2">
+                            <Label htmlFor="whatsappLimitPerScreen">Max WhatsApp per screen</Label>
+                            <Input
+                              id="whatsappLimitPerScreen"
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={formData.whatsappLimitPerScreen ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setFormData({
+                                  ...formData,
+                                  whatsappLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.whatsappLimitPerScreen),
+                                });
+                              }}
+                              placeholder="No limit"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Leave empty for no limit. Once reached, no more WhatsApp until reset.
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <span className="text-sm text-muted-foreground">
+                            WhatsApp sent: <strong>{formData.whatsappSentCount}</strong>
+                            {formData.whatsappLimitPerScreen != null && <span className="ml-1">/ {formData.whatsappLimitPerScreen}</span>}
+                            {user?.role === "super_admin" && formData.whatsappLimitPerScreen != null && (
+                              <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                            )}
+                          </span>
+                          {user?.role !== "super_admin" && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const r = await api.updateScreenConfig(screen.id, { resetWhatsAppCount: true });
+                                  if (r && (r as any).ok !== false) {
+                                    setFormData((f) => ({ ...f, whatsappSentCount: 0 }));
+                                    toast({ title: "WhatsApp count reset", description: "WhatsApp sent count has been set to 0." });
+                                    await refreshScreens();
+                                    loadCurrentPlaylist();
+                                  } else throw new Error((r as any)?.error || "Reset failed");
+                                } catch (err: any) {
+                                  toast({
+                                    title: "Reset failed",
+                                    description: err?.message || "Could not reset WhatsApp count",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              Reset WhatsApp count
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </>
               )}
             </div>
-
-            {/* Date Range Configuration for Playlist */}
-            {formData.playlistId && formData.playlistId !== "none" && (
-              <div className="space-y-4 pt-2 border-t border-border">
-                <Label className="text-sm font-medium">Playlist Date Range (Optional)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Configure when this playlist should be active. Leave empty for always active.
-                </p>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="startDate" className="text-xs">Start Date</Label>
-                      {formData.playlistStartDate && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => setFormData({ ...formData, playlistStartDate: null })}
-                        >
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.playlistStartDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.playlistStartDate ? (
-                            format(formData.playlistStartDate, "PPP")
-                          ) : (
-                            <span>Pick a start date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formData.playlistStartDate || undefined}
-                          onSelect={(date) => setFormData({ ...formData, playlistStartDate: date || null })}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="endDate" className="text-xs">End Date</Label>
-                      {formData.playlistEndDate && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => setFormData({ ...formData, playlistEndDate: null })}
-                        >
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.playlistEndDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.playlistEndDate ? (
-                            format(formData.playlistEndDate, "PPP")
-                          ) : (
-                            <span>Pick an end date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formData.playlistEndDate || undefined}
-                          onSelect={(date) => setFormData({ ...formData, playlistEndDate: date || null })}
-                          initialFocus
-                          disabled={(date) => {
-                            if (formData.playlistStartDate) {
-                              return date < formData.playlistStartDate;
-                            }
-                            return false;
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                {formData.playlistStartDate && formData.playlistEndDate && formData.playlistEndDate < formData.playlistStartDate && (
-                  <p className="text-xs text-destructive">
-                    End date must be after start date
-                  </p>
-                )}
-              </div>
-            )}
-            <div className="flex items-center justify-between space-x-2 py-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="isActive">Enable Screen</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable or disable this screen
-                </p>
-              </div>
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between space-x-2 py-2 border-t">
-              <div className="space-y-0.5">
-                <Label htmlFor="hideScreenId">Hide Screen ID</Label>
-                <p className="text-sm text-muted-foreground">
-                  Hide the screen ID display in the top-left corner
-                </p>
-              </div>
-              <Switch
-                id="hideScreenId"
-                checked={formData.hideScreenId}
-                onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
-              />
-            </div>
-
-            {/* SMS after payment (for screens with payment flow) */}
-            {(screen.flowType ?? "").toString().toLowerCase() !== "f2" && (
-              <>
-                <div className={cn("space-y-4 pt-4 border-t-2 border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1 flex-1">
-                      <Label className="text-base font-semibold flex items-center gap-2">
-                        📱 SMS Messaging
-                        {formData.smsEnabled && (
-                          <Badge variant="default" className="text-xs">Enabled</Badge>
-                        )}
-                        {!formData.smsEnabled && smsEnabledForAccount && (
-                          <Badge variant="secondary" className="text-xs">Disabled</Badge>
-                        )}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {smsEnabledForAccount
-                          ? user?.role === "super_admin"
-                            ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
-                            : "⚠️ IMPORTANT: Even though your admin account has SMS limits, you must toggle this ON for each screen to send SMS. When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
-                          : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
-                      </p>
-                      {!formData.smsEnabled && smsEnabledForAccount && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-                          ⚠️ SMS is currently OFF for this screen. Toggle it ON to enable SMS sending.
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Switch
-                        id="smsEnabled"
-                        checked={formData.smsEnabled}
-                        onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
-                        disabled={!smsEnabledForAccount}
-                        className="scale-125"
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {formData.smsEnabled ? "ON" : "OFF"}
-                      </span>
-                    </div>
-                  </div>
-                  {formData.smsEnabled && (
-                    <>
-                      {user?.role !== "super_admin" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
-                          <Input
-                            id="smsLimitPerScreen"
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={formData.smsLimitPerScreen ?? ""}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setFormData({
-                                ...formData,
-                                smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
-                              });
-                            }}
-                            placeholder="No limit"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Leave empty for no limit. Once reached, no more SMS until reset.
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <span className="text-sm text-muted-foreground">
-                          SMS sent: <strong>{formData.smsSentCount}</strong>
-                          {formData.smsLimitPerScreen != null && <span className="ml-1">/ {formData.smsLimitPerScreen}</span>}
-                          {user?.role === "super_admin" && formData.smsLimitPerScreen != null && (
-                            <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
-                          )}
-                        </span>
-                        {user?.role !== "super_admin" && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                const r = await api.updateScreenConfig(screen.id, { resetSmsCount: true });
-                                if (r && (r as any).ok !== false) {
-                                  setFormData((f) => ({ ...f, smsSentCount: 0 }));
-                                  toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
-                                  await refreshScreens();
-                                  loadCurrentPlaylist();
-                                } else throw new Error((r as any)?.error || "Reset failed");
-                              } catch (err: any) {
-                                toast({
-                                  title: "Reset failed",
-                                  description: err?.message || "Could not reset SMS count",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                          >
-                            Reset SMS count
-                          </Button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className={cn("space-y-4 pt-4 border-t-2 border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1 flex-1">
-                      <Label className="text-base font-semibold flex items-center gap-2">
-                        💬 WhatsApp Messaging
-                        {formData.whatsappEnabled && (
-                          <Badge variant="default" className="text-xs">Enabled</Badge>
-                        )}
-                        {!formData.whatsappEnabled && whatsappEnabledForAccount && (
-                          <Badge variant="secondary" className="text-xs">Disabled</Badge>
-                        )}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {whatsappEnabledForAccount
-                          ? user?.role === "super_admin"
-                            ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
-                            : "⚠️ IMPORTANT: Even though your admin account has WhatsApp limits, you must toggle this ON for each screen to send WhatsApp. When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
-                          : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
-                      </p>
-                      {!formData.whatsappEnabled && whatsappEnabledForAccount && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-                          ⚠️ WhatsApp is currently OFF for this screen. Toggle it ON to enable WhatsApp sending.
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Switch
-                        id="whatsappEnabled"
-                        checked={formData.whatsappEnabled}
-                        onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
-                        disabled={!whatsappEnabledForAccount}
-                        className="scale-125"
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {formData.whatsappEnabled ? "ON" : "OFF"}
-                      </span>
-                    </div>
-                  </div>
-                  {formData.whatsappEnabled && (
-                    <>
-                      {user?.role !== "super_admin" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="whatsappLimitPerScreen">Max WhatsApp per screen</Label>
-                          <Input
-                            id="whatsappLimitPerScreen"
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={formData.whatsappLimitPerScreen ?? ""}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setFormData({
-                                ...formData,
-                                whatsappLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.whatsappLimitPerScreen),
-                              });
-                            }}
-                            placeholder="No limit"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Leave empty for no limit. Once reached, no more WhatsApp until reset.
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <span className="text-sm text-muted-foreground">
-                          WhatsApp sent: <strong>{formData.whatsappSentCount}</strong>
-                          {formData.whatsappLimitPerScreen != null && <span className="ml-1">/ {formData.whatsappLimitPerScreen}</span>}
-                          {user?.role === "super_admin" && formData.whatsappLimitPerScreen != null && (
-                            <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
-                          )}
-                        </span>
-                        {user?.role !== "super_admin" && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                const r = await api.updateScreenConfig(screen.id, { resetWhatsAppCount: true });
-                                if (r && (r as any).ok !== false) {
-                                  setFormData((f) => ({ ...f, whatsappSentCount: 0 }));
-                                  toast({ title: "WhatsApp count reset", description: "WhatsApp sent count has been set to 0." });
-                                  await refreshScreens();
-                                  loadCurrentPlaylist();
-                                } else throw new Error((r as any)?.error || "Reset failed");
-                              } catch (err: any) {
-                                toast({
-                                  title: "Reset failed",
-                                  description: err?.message || "Could not reset WhatsApp count",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                          >
-                            Reset WhatsApp count
-                          </Button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter className="flex-shrink-0">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter className="flex-shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
         )}
       </DialogContent>
     </Dialog>

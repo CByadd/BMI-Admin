@@ -33,10 +33,10 @@ const ScreenEdit = () => {
   const { user } = useAuth();
   const smsEnabledForAccount = user?.role !== "admin" || ((user as any)?.totalMessageLimit != null && Number((user as any).totalMessageLimit) > 0);
   const whatsappEnabledForAccount = user?.role !== "admin" || ((user as any)?.totalWhatsAppLimit != null && Number((user as any).totalWhatsAppLimit) > 0);
-  
+
   // Find screen from context
   const screen = screens?.find(s => s.id === id);
-  
+
   const [formData, setFormData] = useState({
     name: screen?.name || "",
     location: screen?.location || "",
@@ -87,17 +87,17 @@ const ScreenEdit = () => {
 
   const loadCurrentPlaylist = async () => {
     if (!id) return;
-    
+
     setIsLoadingData(true);
     try {
       const response = await api.getPlayer(id);
       if (response.ok && response.player) {
         const player = response.player;
         // Check for slot count - use explicit check for null/undefined, not just falsy
-        const slotCount = (player.flowDrawerSlotCount !== null && player.flowDrawerSlotCount !== undefined) 
-          ? player.flowDrawerSlotCount 
+        const slotCount = (player.flowDrawerSlotCount !== null && player.flowDrawerSlotCount !== undefined)
+          ? player.flowDrawerSlotCount
           : 2;
-        
+
         console.log('DEBUG: Loading player data:', {
           flowDrawerSlotCount: player.flowDrawerSlotCount,
           slotCount,
@@ -107,54 +107,54 @@ const ScreenEdit = () => {
           flowDrawerImage4Url: player.flowDrawerImage4Url,
           flowDrawerImage5Url: player.flowDrawerImage5Url,
         });
-        
+
         // Load from individual URL fields based on slot count
         const flowDrawerSlots: Array<{ url: string | null; file: File | null; preview: string | null }> = [];
-        
+
         // Build slots array from individual URL fields
         if (slotCount >= 1) {
-          flowDrawerSlots.push({ 
-            url: player.flowDrawerImage1Url || null, 
-            file: null, 
-            preview: player.flowDrawerImage1Url || null 
+          flowDrawerSlots.push({
+            url: player.flowDrawerImage1Url || null,
+            file: null,
+            preview: player.flowDrawerImage1Url || null
           });
         }
         if (slotCount >= 2) {
-          flowDrawerSlots.push({ 
-            url: player.flowDrawerImage2Url || null, 
-            file: null, 
-            preview: player.flowDrawerImage2Url || null 
+          flowDrawerSlots.push({
+            url: player.flowDrawerImage2Url || null,
+            file: null,
+            preview: player.flowDrawerImage2Url || null
           });
         }
         if (slotCount >= 3) {
-          flowDrawerSlots.push({ 
-            url: player.flowDrawerImage3Url || null, 
-            file: null, 
-            preview: player.flowDrawerImage3Url || null 
+          flowDrawerSlots.push({
+            url: player.flowDrawerImage3Url || null,
+            file: null,
+            preview: player.flowDrawerImage3Url || null
           });
         }
         if (slotCount >= 4) {
-          flowDrawerSlots.push({ 
-            url: player.flowDrawerImage4Url || null, 
-            file: null, 
-            preview: player.flowDrawerImage4Url || null 
+          flowDrawerSlots.push({
+            url: player.flowDrawerImage4Url || null,
+            file: null,
+            preview: player.flowDrawerImage4Url || null
           });
         }
         if (slotCount >= 5) {
-          flowDrawerSlots.push({ 
-            url: player.flowDrawerImage5Url || null, 
-            file: null, 
-            preview: player.flowDrawerImage5Url || null 
+          flowDrawerSlots.push({
+            url: player.flowDrawerImage5Url || null,
+            file: null,
+            preview: player.flowDrawerImage5Url || null
           });
         }
-        
+
         // Ensure slots array has correct length (fill empty slots)
         while (flowDrawerSlots.length < slotCount) {
           flowDrawerSlots.push({ url: null, file: null, preview: null });
         }
-        
+
         console.log('DEBUG: Loaded flow drawer slots:', flowDrawerSlots);
-        
+
         setFormData({
           name: player.deviceName || screen?.name || "",
           location: player.location || screen?.location || "",
@@ -258,7 +258,7 @@ const ScreenEdit = () => {
 
   const loadScreenStats = async () => {
     if (!id) return;
-    
+
     setIsLoadingStats(true);
     try {
       const response = await api.getScreenBMIRecords(id, 'all');
@@ -287,17 +287,17 @@ const ScreenEdit = () => {
         });
         return;
       }
-      
-      // Validate file size (1.3 MB max per file)
-      if (file.size > 1.3 * 1024 * 1024) {
+
+      // Validate file size (5 MB max per file)
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Logo file must be less than 1.3 MB",
+          description: "Logo file must be less than 5 MB",
           variant: "destructive",
         });
         return;
       }
-      
+
       setLogoFile(file);
       // Create preview
       const reader = new FileReader();
@@ -320,17 +320,17 @@ const ScreenEdit = () => {
 
     setIsUploadingLogo(true);
     setLogoUploadProgress(0);
-    
+
     // Simulate progress
     const progressInterval = setInterval(() => {
       setLogoUploadProgress(prev => Math.min(prev + 10, 90));
     }, 200);
-    
+
     try {
       const response = await api.uploadLogo(id, logoFile);
       clearInterval(progressInterval);
       setLogoUploadProgress(100);
-      
+
       if (response.ok) {
         setTimeout(() => {
           setLogoUrl(response.logoUrl);
@@ -405,9 +405,9 @@ const ScreenEdit = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       // Validate date range if both dates are provided
       if (formData.playlistStartDate && formData.playlistEndDate && formData.playlistEndDate < formData.playlistStartDate) {
@@ -428,7 +428,7 @@ const ScreenEdit = () => {
       // Update screen configuration via API (without flowType - it's static)
       // Include playlistId and date range in the update
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
-      
+
       const isF2 = (screen?.flowType ?? "").toString().toLowerCase() === "f2";
       // Prepare date values - always send them (null if not set). Omit paymentAmount for F2 (not used).
       const configPayload: any = {
@@ -446,15 +446,15 @@ const ScreenEdit = () => {
         whatsappEnabled: formData.whatsappEnabled,
         whatsappLimitPerScreen: formData.whatsappLimitPerScreen !== null && formData.whatsappLimitPerScreen !== undefined ? formData.whatsappLimitPerScreen : null,
       };
-      
+
       console.log('DEBUG: Saving screen config with slot count:', formData.flowDrawerSlotCount);
-      
+
       // Always include playlist fields - send null to clear, or values to set
       // IMPORTANT: Always send playlistId (even if null) so backend knows to process it
       configPayload.playlistId = playlistIdToSend;
       configPayload.playlistStartDate = formData.playlistStartDate ? formData.playlistStartDate.toISOString() : null;
       configPayload.playlistEndDate = formData.playlistEndDate ? formData.playlistEndDate.toISOString() : null;
-      
+
       console.log("Saving screen config:", configPayload);
       console.log("Playlist assignment details:", {
         playlistId: configPayload.playlistId,
@@ -462,7 +462,7 @@ const ScreenEdit = () => {
         playlistEndDate: configPayload.playlistEndDate,
         hasPlaylist: !!configPayload.playlistId
       });
-      
+
       const response = await api.updateScreenConfig(id, configPayload);
       console.log("Screen config update response:", response);
 
@@ -470,7 +470,7 @@ const ScreenEdit = () => {
       if (configPayload.playlistId) {
         const verifyResponse = await api.getPlayer(id);
         console.log("Verification - current playlist assignment:", verifyResponse.player?.playlistId);
-        
+
         if (verifyResponse.player?.playlistId !== configPayload.playlistId) {
           console.warn("WARNING: Playlist assignment may not have saved correctly!");
           toast({
@@ -501,10 +501,10 @@ const ScreenEdit = () => {
         };
         updateScreen(id, updatedScreenData);
       }
-      
+
       // Refresh to get latest data from server
       await refreshScreens();
-      
+
       // Navigate back to screens list
       navigate("/screens");
     } catch (error: any) {
@@ -708,7 +708,7 @@ const ScreenEdit = () => {
                   </div>
                 </div>
 
-                
+
 
                 {/* Second row: Height Calibration and Payment Amount with Logo Upload (Payment hidden for F2) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -723,8 +723,8 @@ const ScreenEdit = () => {
                           value={formData.heightCalibration ?? ""}
                           onChange={(e) => {
                             const value = e.target.value;
-                            setFormData({ 
-                              ...formData, 
+                            setFormData({
+                              ...formData,
                               heightCalibration: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
                             });
                           }}
@@ -745,278 +745,278 @@ const ScreenEdit = () => {
                             checked={formData.heightCalibrationEnabled}
                             onCheckedChange={(checked) => setFormData({ ...formData, heightCalibrationEnabled: checked })}
                           />
-                          
+
                         </div>
-                        
+
                       </div>
-                      
+
                       {(screen?.flowType ?? "").toString().toLowerCase() !== "f2" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
-                        <Input
-                          id="paymentAmount"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.paymentAmount ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setFormData({ 
-                              ...formData, 
-                              paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
-                            });
-                          }}
-                          placeholder="Leave empty for default (₹9)"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
-                        </p>
-                      </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
+                          <Input
+                            id="paymentAmount"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.paymentAmount ?? ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setFormData({
+                                ...formData,
+                                paymentAmount: value === "" ? null : (isNaN(parseFloat(value)) ? null : parseFloat(value))
+                              });
+                            }}
+                            placeholder="Leave empty for default (₹9)"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Payment amount for BMI analysis on this screen. Leave empty to use default amount (₹9).
+                          </p>
+                        </div>
                       )}
                     </div>
 
-                       {/* Hide Screen ID Toggle */}
-                <div className="flex items-center justify-between space-x-2 py-2 border-t">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="hideScreenId">Hide Screen ID</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Hide the screen ID display in the top-left corner
-                    </p>
-                  </div>
-                  <Switch
-                    id="hideScreenId"
-                    checked={formData.hideScreenId}
-                    onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
-                  />
-                </div>
-
-   {/* Enable Screen Toggle */}
-                <div className="flex items-center justify-between space-x-2 py-2">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="isActive">Enable Screen</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enable or disable this screen
-                    </p>
-                  </div>
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  />
-                </div>
-
-                {/* SMS after payment (for screens with payment flow) */}
-                {(screen?.flowType ?? "").toString().toLowerCase() !== "f2" && (
-                  <div className={cn("space-y-4 pt-4 border-t-2 border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1 flex-1">
-                        <Label className="text-base font-semibold flex items-center gap-2">
-                          📱 SMS Messaging
-                          {formData.smsEnabled && (
-                            <Badge variant="default" className="text-xs">Enabled</Badge>
-                          )}
-                          {!formData.smsEnabled && smsEnabledForAccount && (
-                            <Badge variant="secondary" className="text-xs">Disabled</Badge>
-                          )}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          {smsEnabledForAccount
-                            ? user?.role === "super_admin"
-                              ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
-                              : "⚠️ IMPORTANT: Even though your admin account has SMS limits, you must toggle this ON for each screen to send SMS. When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
-                            : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
+                    {/* Hide Screen ID Toggle */}
+                    <div className="flex items-center justify-between space-x-2 py-2 border-t">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="hideScreenId">Hide Screen ID</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Hide the screen ID display in the top-left corner
                         </p>
-                        {!formData.smsEnabled && smsEnabledForAccount && (
-                          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-                            ⚠️ SMS is currently OFF for this screen. Toggle it ON to enable SMS sending.
-                          </p>
-                        )}
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Switch
-                          id="smsEnabled"
-                          checked={formData.smsEnabled}
-                          onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
-                          disabled={!smsEnabledForAccount}
-                          className="scale-125"
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {formData.smsEnabled ? "ON" : "OFF"}
-                        </span>
-                      </div>
+                      <Switch
+                        id="hideScreenId"
+                        checked={formData.hideScreenId}
+                        onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
+                      />
                     </div>
-                    {formData.smsEnabled && (
-                      <>
-                        {user?.role !== "super_admin" && (
-                          <div className="space-y-2">
-                            <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
-                            <Input
-                              id="smsLimitPerScreen"
-                              type="number"
-                              min={0}
-                              step={1}
-                              value={formData.smsLimitPerScreen ?? ""}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setFormData({
-                                  ...formData,
-                                  smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
-                                });
-                              }}
-                              placeholder="No limit"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Leave empty for no limit. Once reached, no more SMS until reset.
-                            </p>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <span className="text-sm text-muted-foreground">
-                            SMS sent: <strong>{formData.smsSentCount}</strong>
-                            {formData.smsLimitPerScreen != null && <span className="ml-1">/ {formData.smsLimitPerScreen}</span>}
-                            {user?.role === "super_admin" && formData.smsLimitPerScreen != null && (
-                              <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
-                            )}
-                          </span>
-                          {user?.role !== "super_admin" && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  const r = await api.updateScreenConfig(id!, { resetSmsCount: true });
-                                  if (r && (r as any).ok !== false) {
-                                    setFormData((f) => ({ ...f, smsSentCount: 0 }));
-                                    toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
-                                    await refreshScreens();
-                                    loadCurrentPlaylist();
-                                  } else throw new Error((r as any)?.error || "Reset failed");
-                                } catch (err: any) {
-                                  toast({
-                                    title: "Reset failed",
-                                    description: err?.message || "Could not reset SMS count",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              Reset SMS count
-                            </Button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
 
-                {/* WhatsApp after payment (for screens with payment flow) */}
-                {(screen?.flowType ?? "").toString().toLowerCase() !== "f2" && (
-                  <div className={cn("space-y-4 pt-4 border-t-2 border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1 flex-1">
-                        <Label className="text-base font-semibold flex items-center gap-2">
-                          💬 WhatsApp Messaging
-                          {formData.whatsappEnabled && (
-                            <Badge variant="default" className="text-xs">Enabled</Badge>
-                          )}
-                          {!formData.whatsappEnabled && whatsappEnabledForAccount && (
-                            <Badge variant="secondary" className="text-xs">Disabled</Badge>
-                          )}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          {whatsappEnabledForAccount
-                            ? user?.role === "super_admin"
-                              ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
-                              : "⚠️ IMPORTANT: Even though your admin account has WhatsApp limits, you must toggle this ON for each screen to send WhatsApp. When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
-                            : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
+                    {/* Enable Screen Toggle */}
+                    <div className="flex items-center justify-between space-x-2 py-2">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="isActive">Enable Screen</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Enable or disable this screen
                         </p>
-                        {!formData.whatsappEnabled && whatsappEnabledForAccount && (
-                          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-                            ⚠️ WhatsApp is currently OFF for this screen. Toggle it ON to enable WhatsApp sending.
-                          </p>
-                        )}
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Switch
-                          id="whatsappEnabled"
-                          checked={formData.whatsappEnabled}
-                          onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
-                          disabled={!whatsappEnabledForAccount}
-                          className="scale-125"
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {formData.whatsappEnabled ? "ON" : "OFF"}
-                        </span>
-                      </div>
+                      <Switch
+                        id="isActive"
+                        checked={formData.isActive}
+                        onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                      />
                     </div>
-                    {formData.whatsappEnabled && (
-                      <>
-                        {user?.role !== "super_admin" && (
-                          <div className="space-y-2">
-                            <Label htmlFor="whatsappLimitPerScreen">Max WhatsApp per screen</Label>
-                            <Input
-                              id="whatsappLimitPerScreen"
-                              type="number"
-                              min={0}
-                              step={1}
-                              value={formData.whatsappLimitPerScreen ?? ""}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setFormData({
-                                  ...formData,
-                                  whatsappLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.whatsappLimitPerScreen),
-                                });
-                              }}
-                              placeholder="No limit"
-                            />
+
+                    {/* SMS after payment (for screens with payment flow) */}
+                    {(screen?.flowType ?? "").toString().toLowerCase() !== "f2" && (
+                      <div className={cn("space-y-4 pt-4 border-t-2 border-border", !smsEnabledForAccount && "opacity-60 pointer-events-none")}>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1 flex-1">
+                            <Label className="text-base font-semibold flex items-center gap-2">
+                              📱 SMS Messaging
+                              {formData.smsEnabled && (
+                                <Badge variant="default" className="text-xs">Enabled</Badge>
+                              )}
+                              {!formData.smsEnabled && smsEnabledForAccount && (
+                                <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                              )}
+                            </Label>
                             <p className="text-xs text-muted-foreground">
-                              Leave empty for no limit. Once reached, no more WhatsApp until reset.
+                              {smsEnabledForAccount
+                                ? user?.role === "super_admin"
+                                  ? "When enabled, an SMS is sent after payment. For screens not assigned to any admin, you can enable SMS here."
+                                  : "⚠️ IMPORTANT: Even though your admin account has SMS limits, you must toggle this ON for each screen to send SMS. When enabled, an SMS is sent to the user's mobile after payment. Use the limit to cap how many SMS can be sent for this screen."
+                                : "SMS is disabled for your account. Ask super admin to set a total SMS limit for you."}
                             </p>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <span className="text-sm text-muted-foreground">
-                            WhatsApp sent: <strong>{formData.whatsappSentCount}</strong>
-                            {formData.whatsappLimitPerScreen != null && <span className="ml-1">/ {formData.whatsappLimitPerScreen}</span>}
-                            {user?.role === "super_admin" && formData.whatsappLimitPerScreen != null && (
-                              <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                            {!formData.smsEnabled && smsEnabledForAccount && (
+                              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                                ⚠️ SMS is currently OFF for this screen. Toggle it ON to enable SMS sending.
+                              </p>
                             )}
-                          </span>
-                          {user?.role !== "super_admin" && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  const r = await api.updateScreenConfig(id!, { resetWhatsAppCount: true });
-                                  if (r && (r as any).ok !== false) {
-                                    setFormData((f) => ({ ...f, whatsappSentCount: 0 }));
-                                    toast({ title: "WhatsApp count reset", description: "WhatsApp sent count has been set to 0." });
-                                    await refreshScreens();
-                                    loadCurrentPlaylist();
-                                  } else throw new Error((r as any)?.error || "Reset failed");
-                                } catch (err: any) {
-                                  toast({
-                                    title: "Reset failed",
-                                    description: err?.message || "Could not reset WhatsApp count",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              Reset WhatsApp count
-                            </Button>
-                          )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Switch
+                              id="smsEnabled"
+                              checked={formData.smsEnabled}
+                              onCheckedChange={(checked) => setFormData({ ...formData, smsEnabled: checked })}
+                              disabled={!smsEnabledForAccount}
+                              className="scale-125"
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {formData.smsEnabled ? "ON" : "OFF"}
+                            </span>
+                          </div>
                         </div>
-                      </>
+                        {formData.smsEnabled && (
+                          <>
+                            {user?.role !== "super_admin" && (
+                              <div className="space-y-2">
+                                <Label htmlFor="smsLimitPerScreen">Max SMS per screen</Label>
+                                <Input
+                                  id="smsLimitPerScreen"
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={formData.smsLimitPerScreen ?? ""}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    setFormData({
+                                      ...formData,
+                                      smsLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.smsLimitPerScreen),
+                                    });
+                                  }}
+                                  placeholder="No limit"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Leave empty for no limit. Once reached, no more SMS until reset.
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                              <span className="text-sm text-muted-foreground">
+                                SMS sent: <strong>{formData.smsSentCount}</strong>
+                                {formData.smsLimitPerScreen != null && <span className="ml-1">/ {formData.smsLimitPerScreen}</span>}
+                                {user?.role === "super_admin" && formData.smsLimitPerScreen != null && (
+                                  <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                                )}
+                              </span>
+                              {user?.role !== "super_admin" && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      const r = await api.updateScreenConfig(id!, { resetSmsCount: true });
+                                      if (r && (r as any).ok !== false) {
+                                        setFormData((f) => ({ ...f, smsSentCount: 0 }));
+                                        toast({ title: "SMS count reset", description: "SMS sent count has been set to 0." });
+                                        await refreshScreens();
+                                        loadCurrentPlaylist();
+                                      } else throw new Error((r as any)?.error || "Reset failed");
+                                    } catch (err: any) {
+                                      toast({
+                                        title: "Reset failed",
+                                        description: err?.message || "Could not reset SMS count",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  Reset SMS count
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
+
+                    {/* WhatsApp after payment (for screens with payment flow) */}
+                    {(screen?.flowType ?? "").toString().toLowerCase() !== "f2" && (
+                      <div className={cn("space-y-4 pt-4 border-t-2 border-border", !whatsappEnabledForAccount && "opacity-60 pointer-events-none")}>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1 flex-1">
+                            <Label className="text-base font-semibold flex items-center gap-2">
+                              💬 WhatsApp Messaging
+                              {formData.whatsappEnabled && (
+                                <Badge variant="default" className="text-xs">Enabled</Badge>
+                              )}
+                              {!formData.whatsappEnabled && whatsappEnabledForAccount && (
+                                <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                              )}
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              {whatsappEnabledForAccount
+                                ? user?.role === "super_admin"
+                                  ? "When enabled, a WhatsApp message is sent after payment. For screens not assigned to any admin, you can enable WhatsApp here."
+                                  : "⚠️ IMPORTANT: Even though your admin account has WhatsApp limits, you must toggle this ON for each screen to send WhatsApp. When enabled, a WhatsApp message is sent to the user's mobile after payment. Use the limit to cap how many WhatsApp messages can be sent for this screen."
+                                : "WhatsApp is disabled for your account. Ask super admin to set a total WhatsApp limit for you."}
+                            </p>
+                            {!formData.whatsappEnabled && whatsappEnabledForAccount && (
+                              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                                ⚠️ WhatsApp is currently OFF for this screen. Toggle it ON to enable WhatsApp sending.
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Switch
+                              id="whatsappEnabled"
+                              checked={formData.whatsappEnabled}
+                              onCheckedChange={(checked) => setFormData({ ...formData, whatsappEnabled: checked })}
+                              disabled={!whatsappEnabledForAccount}
+                              className="scale-125"
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {formData.whatsappEnabled ? "ON" : "OFF"}
+                            </span>
+                          </div>
+                        </div>
+                        {formData.whatsappEnabled && (
+                          <>
+                            {user?.role !== "super_admin" && (
+                              <div className="space-y-2">
+                                <Label htmlFor="whatsappLimitPerScreen">Max WhatsApp per screen</Label>
+                                <Input
+                                  id="whatsappLimitPerScreen"
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={formData.whatsappLimitPerScreen ?? ""}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    setFormData({
+                                      ...formData,
+                                      whatsappLimitPerScreen: v === "" ? null : (parseInt(v, 10) >= 0 ? parseInt(v, 10) : formData.whatsappLimitPerScreen),
+                                    });
+                                  }}
+                                  placeholder="No limit"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Leave empty for no limit. Once reached, no more WhatsApp until reset.
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                              <span className="text-sm text-muted-foreground">
+                                WhatsApp sent: <strong>{formData.whatsappSentCount}</strong>
+                                {formData.whatsappLimitPerScreen != null && <span className="ml-1">/ {formData.whatsappLimitPerScreen}</span>}
+                                {user?.role === "super_admin" && formData.whatsappLimitPerScreen != null && (
+                                  <span className="ml-2 text-xs text-muted-foreground">(Limit set by admin)</span>
+                                )}
+                              </span>
+                              {user?.role !== "super_admin" && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      const r = await api.updateScreenConfig(id!, { resetWhatsAppCount: true });
+                                      if (r && (r as any).ok !== false) {
+                                        setFormData((f) => ({ ...f, whatsappSentCount: 0 }));
+                                        toast({ title: "WhatsApp count reset", description: "WhatsApp sent count has been set to 0." });
+                                        await refreshScreens();
+                                        loadCurrentPlaylist();
+                                      } else throw new Error((r as any)?.error || "Reset failed");
+                                    } catch (err: any) {
+                                      toast({
+                                        title: "Reset failed",
+                                        description: err?.message || "Could not reset WhatsApp count",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  Reset WhatsApp count
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
 
                   </div>
-                  
+
                   {/* Logo Upload Section - Smaller, on the right */}
                   <div className="md:col-span-1">
                     <Card className={`transition-all h-full ${isUploadingLogo ? 'ring-2 ring-primary' : ''}`}>
@@ -1044,16 +1044,16 @@ const ScreenEdit = () => {
                             </Button>
                           )}
                         </div>
-                        
+
                         {/* Logo Preview - Smaller, square */}
                         {logoPreview ? (
                           <div className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-border bg-muted/50 flex items-center justify-center">
-                            <img 
-                              src={logoPreview} 
-                              alt="Logo preview" 
+                            <img
+                              src={logoPreview}
+                              alt="Logo preview"
                               className="max-w-full max-h-full object-contain p-1.5"
                             />
-                            
+
                             {/* Upload Progress Overlay */}
                             {isUploadingLogo && (
                               <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-2">
@@ -1064,7 +1064,7 @@ const ScreenEdit = () => {
                                 </div>
                               </div>
                             )}
-                            
+
                             {/* Remove Selected File Button */}
                             {logoFile && !isUploadingLogo && (
                               <Button
@@ -1077,7 +1077,7 @@ const ScreenEdit = () => {
                                 <X className="h-3 w-3" />
                               </Button>
                             )}
-                            
+
                             {/* Status Badge */}
                             {logoUrl && !logoFile && !isUploadingLogo && (
                               <div className="absolute bottom-1 left-1 bg-green-500/90 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
@@ -1103,7 +1103,7 @@ const ScreenEdit = () => {
                             )}
                           </div>
                         )}
-                        
+
                         {/* File Input - Smaller */}
                         <div className="space-y-1">
                           <Input
@@ -1113,7 +1113,7 @@ const ScreenEdit = () => {
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
-                              
+
                               // Validate file type
                               if (!file.type.startsWith('image/')) {
                                 toast({
@@ -1124,18 +1124,18 @@ const ScreenEdit = () => {
                                 e.target.value = '';
                                 return;
                               }
-                              
-                              // Validate file size (1.3 MB max per file)
-                              if (file.size > 1.3 * 1024 * 1024) {
+
+                              // Validate file size (5 MB max per file)
+                              if (file.size > 5 * 1024 * 1024) {
                                 toast({
                                   title: "File too large",
-                                  description: `Logo must be less than 1.3 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                  description: `Logo must be less than 5 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
                                   variant: "destructive",
                                 });
                                 e.target.value = '';
                                 return;
                               }
-                              
+
                               setLogoFile(file);
                               // Create preview
                               const reader = new FileReader();
@@ -1143,11 +1143,11 @@ const ScreenEdit = () => {
                                 setLogoPreview(reader.result as string);
                               };
                               reader.readAsDataURL(file);
-                              
+
                               // Auto-upload immediately
                               if (!id) return;
                               await handleLogoUpload();
-                              
+
                               e.target.value = ''; // Reset input for re-upload
                             }}
                             className="cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-xs h-8"
@@ -1160,7 +1160,7 @@ const ScreenEdit = () => {
                             ) : logoUrl ? (
                               <span className="text-green-600">Uploaded</span>
                             ) : (
-                              <span>Max 1.3 MB</span>
+                              <span>Max 5 MB</span>
                             )}
                           </p>
                         </div>
@@ -1168,7 +1168,7 @@ const ScreenEdit = () => {
                     </Card>
                   </div>
                 </div>
-                
+
                 {/* Third row: Flow Type */}
                 {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1184,7 +1184,7 @@ const ScreenEdit = () => {
                     </p>
                   </div>
                 </div> */}
-                
+
                 {/* Playlist Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="playlist">Assign Playlist</Label>
@@ -1195,8 +1195,8 @@ const ScreenEdit = () => {
                     </>
                   ) : (
                     <>
-                      <Select 
-                        value={formData.playlistId || "none"} 
+                      <Select
+                        value={formData.playlistId || "none"}
                         onValueChange={(value) => setFormData({ ...formData, playlistId: value === "none" ? "" : value })}
                       >
                         <SelectTrigger>
@@ -1328,9 +1328,9 @@ const ScreenEdit = () => {
                   </div>
                 )}
                  */}
-             
-                
-             
+
+
+
 
                 {/* Flow Drawer Toggle */}
                 <div className="flex items-center justify-between space-x-2 py-2 border-t">
@@ -1357,7 +1357,7 @@ const ScreenEdit = () => {
                         onValueChange={(value) => {
                           const newSlotCount = parseInt(value);
                           const currentSlots = [...formData.flowDrawerSlots];
-                          
+
                           // Resize slots array
                           if (newSlotCount > currentSlots.length) {
                             // Add empty slots
@@ -1368,7 +1368,7 @@ const ScreenEdit = () => {
                             // Remove extra slots
                             currentSlots.splice(newSlotCount);
                           }
-                          
+
                           setFormData({ ...formData, flowDrawerSlotCount: newSlotCount, flowDrawerSlots: currentSlots });
                         }}
                       >
@@ -1381,7 +1381,7 @@ const ScreenEdit = () => {
                           <SelectItem value="5">5 Slots</SelectItem>
                         </SelectContent>
                       </Select>
-                    <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Select the number of image slots for the flow drawer. Each slot can have an image.
                       </p>
                     </div>
@@ -1394,7 +1394,7 @@ const ScreenEdit = () => {
                           Upload images for each slot. Images will be displayed in the flow drawer when a flow is active.
                         </p>
                       </div>
-                      
+
                       {/* Layout: Upload fields on left, Preview on right */}
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Upload Fields - Takes 2 columns */}
@@ -1405,15 +1405,15 @@ const ScreenEdit = () => {
                               const isUploading = uploadingSlots[index] || false;
                               const progress = uploadProgress[index] || 0;
                               const hasImage = slot.url || slot.file;
-                              
+
                               return (
-                                <Card 
-                                  key={index} 
+                                <Card
+                                  key={index}
                                   className={`transition-all flex flex-col h-full ${isUploading ? 'ring-2 ring-primary' : ''}`}
                                 >
                                   <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
                                     {/* Header */}
-                        <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${hasImage ? 'bg-green-500' : 'bg-muted-foreground'}`} />
                                         <div className="flex flex-col">
@@ -1424,63 +1424,63 @@ const ScreenEdit = () => {
                                         </div>
                                       </div>
                                       {slot.url && !slot.file && !isUploading && (
-                            <Button
-                              type="button"
+                                        <Button
+                                          type="button"
                                           variant="ghost"
-                              size="sm"
+                                          size="sm"
                                           className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={async () => {
-                                if (!id) return;
-                                const imageNumber = index + 1;
-                                const dbFieldMap: Record<number, string> = {
-                                  1: 'flowDrawerImage1Url',
-                                  2: 'flowDrawerImage2Url',
-                                  3: 'flowDrawerImage3Url',
-                                  4: 'flowDrawerImage4Url',
-                                  5: 'flowDrawerImage5Url'
-                                };
-                                
-                                if (!confirm(`Are you sure you want to delete the image for Slot ${index + 1} (${dbFieldMap[imageNumber]})?`)) return;
-                                
-                                try {
-                                  console.log(`[Flow Drawer Delete] Slot ${index + 1} → imageNumber: ${imageNumber} → Database Field: ${dbFieldMap[imageNumber]}`);
-                                  const response = await api.deleteFlowDrawerImage(id, imageNumber);
-                                  if (response.ok) {
-                                    console.log(`[Flow Drawer Delete] Success! Cleared ${dbFieldMap[imageNumber]}`);
-                                    const newSlots = [...formData.flowDrawerSlots];
-                                    newSlots[index] = { url: null, file: null, preview: null };
-                                    setFormData({ ...formData, flowDrawerSlots: newSlots });
-                                    toast({
-                                      title: "Success",
-                                      description: `Slot ${index + 1} image deleted from ${dbFieldMap[imageNumber]}`,
-                                    });
-                                    await refreshScreens();
-                                  } else {
-                                    throw new Error(response.error || 'Delete failed');
-                                  }
-                                } catch (error: any) {
-                                  toast({
-                                    title: "Delete failed",
-                                    description: error?.message || "Failed to delete image",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
+                                          onClick={async () => {
+                                            if (!id) return;
+                                            const imageNumber = index + 1;
+                                            const dbFieldMap: Record<number, string> = {
+                                              1: 'flowDrawerImage1Url',
+                                              2: 'flowDrawerImage2Url',
+                                              3: 'flowDrawerImage3Url',
+                                              4: 'flowDrawerImage4Url',
+                                              5: 'flowDrawerImage5Url'
+                                            };
+
+                                            if (!confirm(`Are you sure you want to delete the image for Slot ${index + 1} (${dbFieldMap[imageNumber]})?`)) return;
+
+                                            try {
+                                              console.log(`[Flow Drawer Delete] Slot ${index + 1} → imageNumber: ${imageNumber} → Database Field: ${dbFieldMap[imageNumber]}`);
+                                              const response = await api.deleteFlowDrawerImage(id, imageNumber);
+                                              if (response.ok) {
+                                                console.log(`[Flow Drawer Delete] Success! Cleared ${dbFieldMap[imageNumber]}`);
+                                                const newSlots = [...formData.flowDrawerSlots];
+                                                newSlots[index] = { url: null, file: null, preview: null };
+                                                setFormData({ ...formData, flowDrawerSlots: newSlots });
+                                                toast({
+                                                  title: "Success",
+                                                  description: `Slot ${index + 1} image deleted from ${dbFieldMap[imageNumber]}`,
+                                                });
+                                                await refreshScreens();
+                                              } else {
+                                                throw new Error(response.error || 'Delete failed');
+                                              }
+                                            } catch (error: any) {
+                                              toast({
+                                                title: "Delete failed",
+                                                description: error?.message || "Failed to delete image",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          }}
+                                        >
                                           <X className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                                    
+                                        </Button>
+                                      )}
+                                    </div>
+
                                     {/* Image Preview */}
                                     {slot.preview ? (
                                       <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-border bg-muted/50">
-                                        <img 
-                                          src={slot.preview} 
-                                          alt={`Flow drawer slot ${index + 1}`} 
+                                        <img
+                                          src={slot.preview}
+                                          alt={`Flow drawer slot ${index + 1}`}
                                           className="w-full h-full object-cover"
                                         />
-                                        
+
                                         {/* Upload Progress Overlay */}
                                         {isUploading && (
                                           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4">
@@ -1492,32 +1492,32 @@ const ScreenEdit = () => {
                                             </div>
                                           </div>
                                         )}
-                                        
+
                                         {/* Remove Selected File Button */}
                                         {slot.file && !isUploading && (
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
+                                          <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="icon"
                                             className="absolute top-2 right-2 h-7 w-7 rounded-full shadow-lg"
-                                onClick={() => {
+                                            onClick={() => {
                                               const newSlots = [...formData.flowDrawerSlots];
                                               newSlots[index] = { ...newSlots[index], file: null, preview: newSlots[index].url || null };
                                               setFormData({ ...formData, flowDrawerSlots: newSlots });
                                               setUploadingSlots({ ...uploadingSlots, [index]: false });
                                               setUploadProgress({ ...uploadProgress, [index]: 0 });
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                                        
+                                            }}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        )}
+
                                         {/* Status Badge */}
                                         {slot.url && !slot.file && !isUploading && (
                                           <div className="absolute bottom-2 left-2 bg-green-500/90 text-white text-xs px-2 py-1 rounded-md font-medium">
                                             Uploaded
-                          </div>
-                        )}
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="relative w-full aspect-video rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex flex-col items-center justify-center gap-2 p-4 transition-colors hover:border-primary/50 hover:bg-muted/50">
@@ -1537,55 +1537,55 @@ const ScreenEdit = () => {
                                         )}
                                       </div>
                                     )}
-                                    
+
                                     {/* File Input */}
                                     <div className="space-y-2">
-                            <Input
-                              type="file"
-                              accept="image/*"
+                                      <Input
+                                        type="file"
+                                        accept="image/*"
                                         disabled={isUploading}
                                         onChange={async (e) => {
-                                const file = e.target.files?.[0];
+                                          const file = e.target.files?.[0];
                                           if (!file) return;
-                                          
+
                                           // Validate file type
-                                  if (!file.type.startsWith('image/')) {
-                                    toast({
-                                      title: "Invalid file type",
+                                          if (!file.type.startsWith('image/')) {
+                                            toast({
+                                              title: "Invalid file type",
                                               description: "Please select an image file (PNG, JPG, GIF, etc.)",
-                                      variant: "destructive",
-                                    });
+                                              variant: "destructive",
+                                            });
                                             e.target.value = ''; // Reset input
-                                    return;
-                                  }
-                                          
-                                          // Validate file size (1.3 MB max per file)
-                                  if (file.size > 1.3 * 1024 * 1024) {
-                                    toast({
-                                      title: "File too large",
-                                              description: `Image must be less than 1.3 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
-                                      variant: "destructive",
-                                    });
+                                            return;
+                                          }
+
+                                          // Validate file size (5 MB max per file)
+                                          if (file.size > 5 * 1024 * 1024) {
+                                            toast({
+                                              title: "File too large",
+                                              description: `Image must be less than 5 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                              variant: "destructive",
+                                            });
                                             e.target.value = ''; // Reset input
-                                    return;
-                                  }
-                                          
+                                            return;
+                                          }
+
                                           // Create preview
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
                                             const newSlots = [...formData.flowDrawerSlots];
                                             newSlots[index] = { ...newSlots[index], file, preview: reader.result as string };
                                             setFormData({ ...formData, flowDrawerSlots: newSlots });
-                                  };
-                                  reader.readAsDataURL(file);
-                                          
+                                          };
+                                          reader.readAsDataURL(file);
+
                                           // Auto-upload immediately
                                           if (!id) return;
-                                          
+
                                           // Set uploading state using functional updates
                                           setUploadingSlots(prev => ({ ...prev, [index]: true }));
                                           setUploadProgress(prev => ({ ...prev, [index]: 0 }));
-                                          
+
                                           // Simulate progress
                                           let progressInterval: NodeJS.Timeout | null = null;
                                           progressInterval = setInterval(() => {
@@ -1594,7 +1594,7 @@ const ScreenEdit = () => {
                                               [index]: Math.min((prev[index] || 0) + 10, 90)
                                             }));
                                           }, 200);
-                                          
+
                                           try {
                                             // Map slot index to database field
                                             const imageNumber = index + 1; // 1-based for API (1, 2, 3, 4, 5)
@@ -1605,72 +1605,72 @@ const ScreenEdit = () => {
                                               4: 'flowDrawerImage4Url',
                                               5: 'flowDrawerImage5Url'
                                             };
-                                            
+
                                             console.log(`[Flow Drawer Upload] Slot ${index + 1} → imageNumber: ${imageNumber} → Database Field: ${dbFieldMap[imageNumber]}`);
-                                            
+
                                             const response = await api.uploadFlowDrawerImage(id, imageNumber, file);
-                                            
+
                                             // Clear progress interval
                                             if (progressInterval) {
                                               clearInterval(progressInterval);
                                               progressInterval = null;
                                             }
-                                            
+
                                             // Set progress to 100%
                                             setUploadProgress(prev => ({ ...prev, [index]: 100 }));
-                                            
-                                  if (response.ok) {
+
+                                            if (response.ok) {
                                               console.log(`[Flow Drawer Upload] Success! Slot ${index + 1} saved to ${dbFieldMap[imageNumber]}`);
-                                              
+
                                               // Update slots with new URL
                                               const newSlots = [...formData.flowDrawerSlots];
-                                              newSlots[index] = { 
-                                                url: response.imageUrl || null, 
-                                                file: null, 
-                                                preview: response.imageUrl || null 
+                                              newSlots[index] = {
+                                                url: response.imageUrl || null,
+                                                file: null,
+                                                preview: response.imageUrl || null
                                               };
                                               setFormData(prev => ({ ...prev, flowDrawerSlots: newSlots }));
-                                              
+
                                               // Clear uploading state immediately
                                               setUploadingSlots(prev => ({ ...prev, [index]: false }));
                                               setUploadProgress(prev => ({ ...prev, [index]: 0 }));
-                                              
-                                    toast({
-                                      title: "Success",
+
+                                              toast({
+                                                title: "Success",
                                                 description: `Slot ${index + 1} image uploaded to ${dbFieldMap[imageNumber]}`,
-                                    });
-                                              
+                                              });
+
                                               refreshScreens();
-                                  } else {
-                                    throw new Error(response.error || 'Upload failed');
-                                  }
-                                } catch (error: any) {
+                                            } else {
+                                              throw new Error(response.error || 'Upload failed');
+                                            }
+                                          } catch (error: any) {
                                             // Clear progress interval
                                             if (progressInterval) {
                                               clearInterval(progressInterval);
                                               progressInterval = null;
                                             }
-                                            
+
                                             // Clear uploading state immediately on error
                                             setUploadingSlots(prev => ({ ...prev, [index]: false }));
                                             setUploadProgress(prev => ({ ...prev, [index]: 0 }));
-                                            
+
                                             // Reset slot to previous state
                                             setFormData(prev => {
                                               const newSlots = [...prev.flowDrawerSlots];
-                                              newSlots[index] = { 
-                                                ...newSlots[index], 
-                                                file: null, 
-                                                preview: newSlots[index].url || null 
+                                              newSlots[index] = {
+                                                ...newSlots[index],
+                                                file: null,
+                                                preview: newSlots[index].url || null
                                               };
                                               return { ...prev, flowDrawerSlots: newSlots };
                                             });
-                                            
-                                  toast({
-                                    title: "Upload failed",
+
+                                            toast({
+                                              title: "Upload failed",
                                               description: error?.message || "Failed to upload image. Please try again.",
-                                    variant: "destructive",
-                                  });
+                                              variant: "destructive",
+                                            });
                                           } finally {
                                             e.target.value = ''; // Reset input for re-upload
                                           }
@@ -1693,8 +1693,8 @@ const ScreenEdit = () => {
                                 </Card>
                               );
                             })}
+                          </div>
                         </div>
-                      </div>
 
                         {/* Preview - Takes 1 column, smaller */}
                         <div className="lg:col-span-1">
@@ -1714,14 +1714,14 @@ const ScreenEdit = () => {
                                   <div className="absolute left-0 top-0 bottom-0 w-1/2 flex items-center justify-center">
                                     <div className="text-[8px] text-muted-foreground/30 text-center font-medium">Content</div>
                                   </div>
-                                  
+
                                   {/* Flow Drawer (right half) */}
                                   <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-black/95 rounded-r-lg p-1.5 shadow-xl">
                                     {(() => {
                                       const slotCount = formData.flowDrawerSlotCount;
-                                      
+
                                       return (
-                                        <div 
+                                        <div
                                           className="w-full h-full"
                                           style={{
                                             display: 'grid',
@@ -1731,23 +1731,23 @@ const ScreenEdit = () => {
                                         >
                                           {/* Render all slots in order */}
                                           {formData.flowDrawerSlots.map((slot, idx) => (
-                                            <div 
-                                              key={idx} 
+                                            <div
+                                              key={idx}
                                               className="w-full rounded overflow-hidden bg-gray-800/50 border border-gray-700/50 transition-all hover:border-gray-600"
                                               style={{ minHeight: '40px' }}
                                             >
                                               {slot.preview ? (
-                                                <img 
-                                                  src={slot.preview} 
+                                                <img
+                                                  src={slot.preview}
                                                   alt={`Slot ${idx + 1}`}
                                                   className="w-full h-full object-cover"
                                                 />
                                               ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px] font-medium">
                                                   Slot {idx + 1}
-                          </div>
-                        )}
-                          </div>
+                                                </div>
+                                              )}
+                                            </div>
                                           ))}
                                         </div>
                                       );
@@ -1755,7 +1755,7 @@ const ScreenEdit = () => {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               {/* Preview Info */}
                               <div className="space-y-2 pt-2 border-t">
                                 <div className="flex items-center justify-between text-xs">
@@ -1779,9 +1779,9 @@ const ScreenEdit = () => {
 
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => navigate("/screens")}
                     disabled={isSaving}
                   >

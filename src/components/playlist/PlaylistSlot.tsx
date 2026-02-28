@@ -23,7 +23,8 @@ interface PlaylistSlotProps {
   onDurationChange: (slotNumber: number, duration: number) => void;
 }
 
-const MAX_FILE_SIZE = 1.3 * 1024 * 1024; // 1.3 MB per file
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB for images
+const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10 MB for videos
 
 export const PlaylistSlot = ({
   slotNumber,
@@ -36,11 +37,15 @@ export const PlaylistSlot = ({
   const { toast } = useToast();
 
   const checkAssetSize = (file: File): boolean => {
-    if (file.size > MAX_FILE_SIZE) {
+    const isVideo = file.type.startsWith("video/");
+    const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    const limitMb = isVideo ? 10 : 5;
+
+    if (file.size > limit) {
       const mb = (file.size / (1024 * 1024)).toFixed(2);
       toast({
         title: "Asset too large",
-        description: `${file.name} is too large (${mb} MB). Each file must be less than 1.3 MB.`,
+        description: `${file.name} is too large (${mb} MB). ${isVideo ? 'Videos' : 'Images'} must be less than ${limitMb} MB.`,
         variant: "destructive",
       });
       return false;
@@ -60,7 +65,7 @@ export const PlaylistSlot = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     try {
       // Try to get media data from drag event
       const mediaDataString = e.dataTransfer.getData('application/json');
@@ -69,7 +74,7 @@ export const PlaylistSlot = ({
         onMediaAdd(slotNumber, mediaData);
         return;
       }
-      
+
       // Fallback: if no JSON data, try to get file
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
@@ -107,9 +112,8 @@ export const PlaylistSlot = ({
 
   return (
     <Card
-      className={`relative p-4 transition-all ${
-        isDragging ? "border-primary bg-primary/5 border-2" : "border-border"
-      }`}
+      className={`relative p-4 transition-all ${isDragging ? "border-primary bg-primary/5 border-2" : "border-border"
+        }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -169,7 +173,7 @@ export const PlaylistSlot = ({
             <p className="text-sm font-medium text-foreground truncate mb-2">
               {media.name}
             </p>
-            
+
             <div className="space-y-2">
               <Label className="text-xs">
                 {media.type === "video" ? "Video Duration" : "Display Duration"}

@@ -60,6 +60,14 @@ All colors MUST be HSL.
     --border: 214 20% 88%;
     --input: 214 20% 88%;
     --ring: 28 92% 54%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 215 25% 15%;
+    --sidebar-primary: 28 92% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 96%;
+    --sidebar-accent-foreground: 28 92% 25%;
+    --sidebar-border: 214 20% 88%;
+    --sidebar-ring: 28 92% 54%;
 
     --radius: 0.75rem;
 
@@ -117,6 +125,14 @@ All colors MUST be HSL.
     --border: 215 20% 22%;
     --input: 215 20% 22%;
     --ring: 28 92% 64%;
+    --sidebar: 215 25% 12%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 28 92% 64%;
+    --sidebar-primary-foreground: 215 30% 8%;
+    --sidebar-accent: 215 20% 18%;
+    --sidebar-accent-foreground: 28 92% 90%;
+    --sidebar-border: 215 20% 22%;
+    --sidebar-ring: 28 92% 64%;
     
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4);
