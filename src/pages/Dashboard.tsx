@@ -17,6 +17,7 @@ const Dashboard = () => {
     totalScreens: 0,
     usersChecked: 0,
     dailyUsers: 0,
+    dailyChecks: 0,
     activeScreens: 0,
     uniqueUsers: 0,
   });
@@ -39,6 +40,7 @@ const Dashboard = () => {
           totalScreens: bmiStats.totalScreens || 0,
           usersChecked: bmiStats.totalRecords || 0,
           dailyUsers: bmiStats.dailyUsers || 0,
+          dailyChecks: bmiStats.dailyChecks || 0,
           activeScreens: bmiStats.activeScreens || 0,
           uniqueUsers: bmiStats.totalUniqueUsers || 0,
         });
@@ -101,9 +103,9 @@ const Dashboard = () => {
             />
             <StatCard
               title="Today's Checks"
-              value={stats.dailyUsers}
+              value={stats.dailyChecks}
               icon={Activity}
-              trend="Unique users today"
+              trend={`${stats.dailyUsers} unique users today`}
               trendUp={true}
             />
             <StatCard

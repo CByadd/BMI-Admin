@@ -204,7 +204,7 @@ export const api = {
   deletePlayer: (screenId: string) => apiRequest('DELETE', API_ENDPOINTS.SCREENS.DELETE(screenId)),
 
   // Analytics
-  getBMIStats: () => apiRequest('GET', API_ENDPOINTS.ANALYTICS.BMI_STATS),
+  getBMIStats: () => apiRequest<any>('GET', API_ENDPOINTS.ANALYTICS.BMI_STATS),
   getUserActivity: (days?: number) => apiRequest('GET', `${API_ENDPOINTS.ANALYTICS.USER_ACTIVITY}${days ? `?days=${days}` : ''}`),
   getWeightClassification: () => apiRequest('GET', API_ENDPOINTS.ANALYTICS.WEIGHT_CLASSIFICATION),
   getScreenBMIRecords: (screenId: string, dateFilter?: string, startDate?: string, endDate?: string, page?: number, limit?: number) => {
