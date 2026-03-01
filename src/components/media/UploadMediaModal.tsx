@@ -30,23 +30,25 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     }
   };
 
-  const MAX_IMAGE_SIZE = 1024 * 1024 * 1024; // 1 GB for images
-  const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1 GB for videos
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB
 
   const checkFileSize = (file: File): { ok: boolean; message?: string } => {
-    const isVideo = file.type.startsWith("video/");
-    const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-    const limitMb = 1024;
+  const isVideo = file.type.startsWith("video/");
+  const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+  const limitMb = isVideo ? 20 : 10;
 
-    if (file.size > limit) {
-      const mb = (file.size / (1024 * 1024)).toFixed(2);
-      return {
-        ok: false,
-        message: `${file.name} is too large (${mb} MB). ${isVideo ? 'Videos' : 'Images'} must be less than ${limitMb} MB.`
-      };
-    }
-    return { ok: true };
-  };
+  if (file.size > limit) {
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    return {
+      ok: false,
+      message: `${file.name} is too large (${mb} MB). ${
+        isVideo ? "Videos" : "Images"
+      } must be less than ${limitMb} MB.`,
+    };
+  }
+  return { ok: true };
+};
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -208,9 +210,9 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
               <p className="text-sm text-muted-foreground mb-2">
                 Drag & drop files here, or click to browse
               </p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Supported: JPG, PNG, MP4, MOV. Limits: 1 GB per file.
-              </p>
+            <p className="text-xs text-muted-foreground mb-4">
+  Supported: JPG, PNG, MP4, MOV. Limits: 10 MB (images), 20 MB (videos).
+</p>
               <input
                 type="file"
                 multiple
