@@ -16,10 +16,10 @@ interface MediaItem {
   name: string;
   type: "image" | "video";
   url: string;
-  duration?: string | number;
+  duration?: string;
   tags: string[];
   uploadDate: string;
-  size: string | number;
+  size: string;
   publicId?: string;
 }
 
@@ -42,14 +42,14 @@ const Media = () => {
       setLoading(true);
       console.log('[MEDIA_PAGE] Fetching media...');
       const response = await api.getAllMedia() as { ok: boolean; media: any[]; total: number; warning?: string };
-      
+
       console.log('[MEDIA_PAGE] Media response:', {
         ok: response.ok,
         mediaCount: response.media?.length || 0,
         total: response.total,
         warning: response.warning
       });
-      
+
       if (response.warning) {
         console.warn('[MEDIA_PAGE] Warning from server:', response.warning);
         toast({
@@ -58,7 +58,7 @@ const Media = () => {
           variant: "default",
         });
       }
-      
+
       if (response.ok && response.media) {
         // Transform API response to match MediaItem interface
         const transformedMedia: MediaItem[] = response.media.map((item: any) => ({
@@ -72,7 +72,7 @@ const Media = () => {
           size: formatFileSize(item.size || 0),
           publicId: item.publicId || item.id || item.public_id
         }));
-        
+
         console.log('[MEDIA_PAGE] Transformed media items:', transformedMedia.length);
         setMediaItems(transformedMedia);
       } else if (response.ok && (!response.media || response.media.length === 0)) {
@@ -141,7 +141,7 @@ const Media = () => {
   const filteredMedia = mediaItems
     .filter(item => {
       const query = searchQuery.toLowerCase();
-      const matchesSearch = !query || 
+      const matchesSearch = !query ||
         item.name.toLowerCase().includes(query) ||
         (item.tags && item.tags.some(tag => tag.toLowerCase().includes(query)));
       const matchesType = filterType === "all" || item.type === filterType;
@@ -188,73 +188,73 @@ const Media = () => {
       </div> */}
 
       {!hasMedia ? (
-          <MediaEmptyState onUpload={() => setUploadModalOpen(true)} />
-        ) : (
-          <div className="space-y-6">
-            {/* Controls Bar */}
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search */}
-                <div className="relative flex-1 sm:max-w-xs">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search by name or tag..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                {/* Filter by Type */}
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="image">Images</SelectItem>
-                    <SelectItem value="video">Videos</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Sort */}
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="name">Name</SelectItem>
-                  </SelectContent>
-                </Select>
+        <MediaEmptyState onUpload={() => setUploadModalOpen(true)} />
+      ) : (
+        <div className="space-y-6">
+          {/* Controls Bar */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search */}
+              <div className="relative flex-1 sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search by name or tag..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
 
-              <Button onClick={() => setUploadModalOpen(true)} className="w-full sm:w-auto sm:self-end">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Media
-              </Button>
+              {/* Filter by Type */}
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="image">Images</SelectItem>
+                  <SelectItem value="video">Videos</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Sort */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>Total: {mediaItems.length}</span>
-              <span>Images: {mediaItems.filter(m => m.type === "image").length}</span>
-              <span>Videos: {mediaItems.filter(m => m.type === "video").length}</span>
-            </div>
+            <Button onClick={() => setUploadModalOpen(true)} className="w-full sm:w-auto sm:self-end">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Media
+            </Button>
+          </div>
 
-            {/* Media Grid */}
-            {filteredMedia.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No media found matching your criteria.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredMedia.map((media) => (
-                  <MediaCard key={media.id} media={media} onDelete={handleDelete} />
-                ))}
-              </div>
-            )}
+          {/* Stats */}
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <span>Total: {mediaItems.length}</span>
+            <span>Images: {mediaItems.filter(m => m.type === "image").length}</span>
+            <span>Videos: {mediaItems.filter(m => m.type === "video").length}</span>
+          </div>
+
+          {/* Media Grid */}
+          {filteredMedia.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No media found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {filteredMedia.map((media) => (
+                <MediaCard key={media.id} media={media} onDelete={handleDelete} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

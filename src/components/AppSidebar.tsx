@@ -121,17 +121,22 @@ export function AppSidebar() {
   return (
     <TooltipProvider delayDuration={200}>
       <Sidebar className={isCollapsed ? "w-24" : "w-60"} collapsible="icon">
-        <SidebarHeader className=" px-2 py-4">
-          <div className={`flex items-center ${isCollapsed ? "justify-center" : ""}`}>
+        <SidebarHeader className="px-3 py-6 border-b border-border/50">
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : "px-1"}`}>
             <img
               src="https://well2day.in/assets/img/Group%202325.png"
-              className={`${isCollapsed ? "h-9 w-9" : "h-10 w-10"} object-contain flex-shrink-0`}
+              className={`${isCollapsed ? "h-9 w-9" : "h-11 w-11"} object-contain flex-shrink-0 transition-all`}
               alt="logo"
             />
             {!isCollapsed && (
-              <h1 className="ml-3 text-lg font-bold text-foreground">
-                Well2Day Admin
-              </h1>
+              <div className="ml-3 overflow-hidden">
+                <h1 className="text-xl font-bold text-foreground leading-tight truncate">
+                  Well2Day
+                </h1>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Admin Panel
+                </p>
+              </div>
             )}
           </div>
         </SidebarHeader>

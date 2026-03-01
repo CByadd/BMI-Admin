@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Activity, ArrowLeft, Edit, MapPin, Monitor, Clock, Calendar, 
+import {
+  Activity, ArrowLeft, Edit, MapPin, Monitor, Clock, Calendar,
   Download, Search, Users, TrendingUp, CheckCircle, ImageIcon, List, Loader2, DollarSign
 } from "lucide-react";
 import api from "@/lib/api";
@@ -77,7 +77,8 @@ const ScreenDetails = () => {
   const [stats, setStats] = useState({
     todayUsers: 0,
     totalUsers: 0,
-    avgBMI: 0
+    avgBMI: 0,
+    totalRevenue: 0
   });
   const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
   const [pagination, setPagination] = useState({
@@ -133,13 +134,13 @@ const ScreenDetails = () => {
   const fetchScreenData = async () => {
     try {
       const response = await api.getPlayer(id!) as { ok: boolean; player: any };
-      
+
       if (response.ok && response.player) {
         const player = response.player;
         const lastSeen = new Date(player.lastSeen);
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-        
+
         // Status logic:
         // - Online: isActive && lastSeen within 5 minutes
         // - Offline: isActive && lastSeen >= 48 hours ago (system is active but hasn't been seen for 48 hours)
@@ -163,7 +164,7 @@ const ScreenDetails = () => {
         const minutesAgo = Math.floor(timeDiff / (1000 * 60));
         const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
         const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-        
+
         let lastSync = "";
         if (minutesAgo < 60) {
           lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
@@ -207,7 +208,7 @@ const ScreenDetails = () => {
           totalUsers: 0, // Will be updated from stats
           avgBMI: 0, // Will be updated from stats
         });
-        
+
         // Store payment amount for displaying in user activity table
         setPaymentAmount(player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null);
       }
@@ -225,28 +226,28 @@ const ScreenDetails = () => {
 
   const fetchBMIRecords = async (loadMore = false) => {
     if (!id) return;
-    
+
     try {
       const page = loadMore ? pagination.page + 1 : 1;
       const limit = pagination.limit;
-      
+
       setPagination(prev => ({
         ...prev,
         loadingMore: true,
         ...(loadMore ? {} : { page: 1 })
       }));
-      
+
       const response = await api.getScreenBMIRecords(
-        id, 
+        id,
         dateFilter,
         undefined,
         undefined,
         page,
         limit
-      ) as { 
-        ok: boolean; 
-        records: UserLog[]; 
-        stats: { todayUsers: number; totalUsers: number; avgBMI: number };
+      ) as {
+        ok: boolean;
+        records: UserLog[];
+        stats: { todayUsers: number; totalUsers: number; avgBMI: number; totalRevenue: number };
         pagination: {
           total: number;
           page: number;
@@ -274,10 +275,10 @@ const ScreenDetails = () => {
         }));
 
         console.log('Formatted Logs:', formattedLogs);
-        
+
         setUserLogs(prev => loadMore ? [...prev, ...formattedLogs] : formattedLogs);
         setStats(response.stats);
-        
+
         setPagination(prev => ({
           ...prev,
           page: response.pagination.page,
@@ -293,23 +294,23 @@ const ScreenDetails = () => {
         description: "Failed to load user logs",
         variant: "destructive",
       });
-      
+
       setPagination(prev => ({
         ...prev,
         loadingMore: false
       }));
     }
   };
-  
+
   // Fetch all records for peak hours analysis
   const fetchAllRecordsForPeakHours = useCallback(async (startDate?: Date, endDate?: Date) => {
     if (!id) return;
-    
+
     try {
       setLoadingPeakHours(true);
       const startDateStr = startDate ? startDate.toISOString().split('T')[0] : undefined;
       const endDateStr = endDate ? endDate.toISOString().split('T')[0] : undefined;
-      
+
       // Fetch with a very high limit to get all records (or we could fetch multiple pages)
       const response = await api.getScreenBMIRecords(
         id,
@@ -322,7 +323,7 @@ const ScreenDetails = () => {
         ok: boolean;
         records: UserLog[];
       };
-      
+
       if (response.ok) {
         const formattedLogs = response.records.map((record) => ({
           id: record.id,
@@ -349,7 +350,7 @@ const ScreenDetails = () => {
   const handlePeakHoursDateRangeChange = useCallback((startDate: Date | undefined, endDate: Date | undefined) => {
     fetchAllRecordsForPeakHours(startDate, endDate);
   }, [fetchAllRecordsForPeakHours]);
-  
+
   // Handle scroll for infinite loading
   const handleScroll = useCallback(() => {
     if (
@@ -359,10 +360,10 @@ const ScreenDetails = () => {
     ) {
       return;
     }
-    
+
     fetchBMIRecords(true);
   }, [pagination.loadingMore, pagination.hasMore]);
-  
+
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -376,24 +377,24 @@ const ScreenDetails = () => {
   const exportToCSV = () => {
     try {
       setExporting(true);
-      
+
       // Apply filters to logs
       let exportData = filteredLogs;
-      
+
       // Filter out anonymous users if requested
       if (exportFilters.registeredUsersOnly) {
         exportData = exportData.filter(log => log.userName !== 'Anonymous' && log.userName !== '-');
       }
-      
+
       // Filter by BMI categories
       const selectedCategories = Object.entries(exportFilters.categories)
         .filter(([_, selected]) => selected)
         .map(([category, _]) => category);
-      
+
       if (selectedCategories.length > 0) {
         exportData = exportData.filter(log => selectedCategories.includes(log.category));
       }
-      
+
       if (exportData.length === 0) {
         toast({
           title: "No data to export",
@@ -403,7 +404,7 @@ const ScreenDetails = () => {
         setExportDialogOpen(false);
         return;
       }
-      
+
       // Prepare CSV headers
       const headers = [
         'Date & Time',
@@ -416,7 +417,7 @@ const ScreenDetails = () => {
         'Amount Paid',
         'Location'
       ];
-      
+
       // Prepare CSV rows
       const rows = exportData.map((log) => {
         const dateTime = new Date(log.date).toLocaleString("en-IN", {
@@ -429,7 +430,7 @@ const ScreenDetails = () => {
           second: "2-digit",
           hour12: true
         });
-        
+
         return [
           dateTime,
           log.userName,
@@ -438,42 +439,42 @@ const ScreenDetails = () => {
           log.height.toString(),
           log.bmi.toString(),
           log.category,
-          log.paymentStatus && log.paymentAmount !== null && log.paymentAmount !== undefined 
-            ? `₹${log.paymentAmount.toFixed(2)}` 
+          log.paymentStatus && log.paymentAmount !== null && log.paymentAmount !== undefined
+            ? `₹${log.paymentAmount.toFixed(2)}`
             : '-',
           log.location || '-'
         ];
       });
-      
+
       // Combine headers and rows
       const csvContent = [
         headers.join(','),
         ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       ].join('\n');
-      
+
       // Create blob and download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      
+
       // Generate filename with screen ID and current date
       const date = new Date().toISOString().split('T')[0];
       const screenId = id || 'screen';
       const filterSuffix = exportFilters.registeredUsersOnly ? '_registered' : '';
       const filename = `${screenId}_export_${date}${filterSuffix}.csv`;
-      
+
       link.setAttribute('download', filename);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: "Export successful",
         description: `Exported ${exportData.length} records to ${filename}`,
       });
-      
+
       setExportDialogOpen(false);
     } catch (error: any) {
       console.error('Error exporting to CSV:', error);
@@ -515,8 +516,8 @@ const ScreenDetails = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => navigate("/screens")}
               >
@@ -531,8 +532,8 @@ const ScreenDetails = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => navigate("/dashboard")}
                 className="flex-1 sm:flex-none"
@@ -540,8 +541,8 @@ const ScreenDetails = () => {
                 <span className="hidden sm:inline">Dashboard</span>
                 <span className="sm:hidden">Dash</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => navigate("/media")}
                 className="flex-1 sm:flex-none"
@@ -549,8 +550,8 @@ const ScreenDetails = () => {
                 <ImageIcon className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Media</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => navigate("/playlists")}
                 className="flex-1 sm:flex-none"
@@ -578,7 +579,7 @@ const ScreenDetails = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.todayUsers}</p>
-                <p className="text-xs text-muted-foreground">Users Today</p>
+                <p className="text-xs text-muted-foreground">Checks Today</p>
               </div>
             </div>
           </Card>
@@ -611,7 +612,7 @@ const ScreenDetails = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.totalUsers}</p>
-                <p className="text-xs text-muted-foreground">Total Users</p>
+                <p className="text-xs text-muted-foreground">Total BMI Checks</p>
               </div>
             </div>
           </Card>
@@ -677,14 +678,14 @@ const ScreenDetails = () => {
         </Card>
 
         {/* Peak Hours Chart */}
-        <PeakHoursChart 
+        <PeakHoursChart
           userLogs={peakHoursData.length > 0 ? peakHoursData : userLogs}
           loading={loadingPeakHours}
           onDateRangeChange={handlePeakHoursDateRangeChange}
         />
 
-      {/* User Logs Section */}
-      <Card className="p-4 sm:p-6">
+        {/* User Logs Section */}
+        <Card className="p-4 sm:p-6">
           <div className="space-y-6">
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
@@ -692,27 +693,16 @@ const ScreenDetails = () => {
                   <h2 className="text-lg font-semibold text-foreground">User Activity Logs</h2>
                   <p className="text-sm text-muted-foreground">Complete measurement history for this screen</p>
                 </div>
-                {filteredLogs.length > 0 && (() => {
-                  const totalRevenue = filteredLogs
-                    .filter(log => log.paymentStatus && log.paymentAmount !== null && log.paymentAmount !== undefined)
-                    .reduce((sum, log) => sum + (log.paymentAmount || 0), 0);
-                  const paidCount = filteredLogs.filter(log => log.paymentStatus).length;
-                  
-                  if (totalRevenue > 0) {
-                    return (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                      
-                        <div>
-                          <p className="text-xs text-muted-foreground">Total Collected Revenue </p>
-                          <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                            ₹{totalRevenue.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                {stats.totalRevenue > 0 && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Collected Revenue </p>
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                        ₹{stats.totalRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -727,9 +717,9 @@ const ScreenDetails = () => {
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-full sm:w-auto"
                   onClick={() => setExportDialogOpen(true)}
                 >
@@ -768,18 +758,18 @@ const ScreenDetails = () => {
                 <tbody className="divide-y divide-border">
                   {filteredLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-accent/50 transition-colors">
-                     <td className="px-4 py-3 text-sm text-foreground">
-  {new Date(log.date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true
-  })}
-</td>
+                      <td className="px-4 py-3 text-sm text-foreground">
+                        {new Date(log.date).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: true
+                        })}
+                      </td>
 
                       <td className="px-4 py-3 text-sm font-medium text-foreground">{log.userName}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{log.mobile}</td>
@@ -803,24 +793,24 @@ const ScreenDetails = () => {
               </table>
             </div>
 
-          {filteredLogs.length === 0 && (
-  <div className="text-center py-12">
-    <Monitor className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-    <p className="text-muted-foreground">No user logs found</p>
-  </div>
-)}
+            {filteredLogs.length === 0 && (
+              <div className="text-center py-12">
+                <Monitor className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No user logs found</p>
+              </div>
+            )}
 
-{pagination.loadingMore && (
-  <div className="flex justify-center py-4">
-    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-  </div>
-)}
+            {pagination.loadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            )}
 
-{!pagination.loadingMore && !pagination.hasMore && userLogs.length > 0 && (
-  <div className="text-center py-4 text-muted-foreground">
-    No more records to load
-  </div>
-)}
+            {!pagination.loadingMore && !pagination.hasMore && userLogs.length > 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                No more records to load
+              </div>
+            )}
 
           </div>
         </Card>
@@ -835,7 +825,7 @@ const ScreenDetails = () => {
               Choose filters for exporting user activity data
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             {/* Registered Users Only Filter */}
             <div className="flex items-start space-x-3">

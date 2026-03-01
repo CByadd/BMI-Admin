@@ -30,13 +30,13 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     }
   };
 
-  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB for images
-  const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10 MB for videos
+  const MAX_IMAGE_SIZE = 1024 * 1024 * 1024; // 1 GB for images
+  const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1 GB for videos
 
   const checkFileSize = (file: File): { ok: boolean; message?: string } => {
     const isVideo = file.type.startsWith("video/");
     const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-    const limitMb = isVideo ? 10 : 5;
+    const limitMb = 1024;
 
     if (file.size > limit) {
       const mb = (file.size / (1024 * 1024)).toFixed(2);
@@ -177,6 +177,12 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  const trimFileName = (name, max = 25) => {
+    if (name.length <= max) return name
+    const ext = name.split('.').pop()
+    return `${name.slice(0, max - ext.length - 4)}...${ext}`
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -203,7 +209,7 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                 Drag & drop files here, or click to browse
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                Supported: JPG, PNG, MP4, MOV. Limits: Images 5 MB, Videos 10 MB.
+                Supported: JPG, PNG, MP4, MOV. Limits: 1 GB per file.
               </p>
               <input
                 type="file"
@@ -231,8 +237,8 @@ export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: Upload
                   <div key={index} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                     {getFileIcon(file)}
                     <div className="flex-1 min-w-0 pr-2">
-                      <p className="text-sm font-medium truncate" title={file.name}>
-                        {file.name}
+                      <p className="text-sm font-medium" title={file.name}>
+                        {trimFileName(file.name)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {formatFileSize(file.size)} • {file.type.split('/')[0]}

@@ -35,63 +35,48 @@ const ScreenStatusTable = () => {
     try {
       setLoading(true);
       const response = await api.getAllPlayers() as { ok: boolean; players: any[] };
-      
+
       if (response.ok && response.players) {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        
-        const screensData: Screen[] = await Promise.all(
-          response.players.slice(0, 4).map(async (player) => {
-            const lastSeen = new Date(player.lastSeen);
-            const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-            
-            // Status logic:
-            // - Online: isActive && lastSeen within 5 minutes
-            // - Offline: isActive && lastSeen >= 48 hours ago (system is active but hasn't been seen for 48 hours)
-            // - Maintenance: !isActive (disabled) OR (isActive && lastSeen > 48 hours ago)
-            let status: "online" | "offline" | "maintenance" = "offline";
-            if (player.isActive && lastSeen >= fiveMinutesAgo) {
-              status = "online";
-            } else if (!player.isActive) {
-              // System is disabled - show as maintenance
-              status = "maintenance";
-            } else if (lastSeen >= fortyEightHoursAgo) {
-              // System is active but offline for 48+ hours - show as maintenance
-              status = "maintenance";
-            } else {
-              // System is active but offline (between 5 minutes and 48 hours) - show as offline
-              status = "offline";
-            }
+        const screensData: Screen[] = response.players.map((player) => {
+          const lastSeen = new Date(player.lastSeen);
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
-            // Calculate time ago
-            const timeDiff = Date.now() - lastSeen.getTime();
-            const minutesAgo = Math.floor(timeDiff / (1000 * 60));
-            const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
-            const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-            
-            let lastSync = "";
-            if (minutesAgo < 60) {
-              lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
-            } else if (hoursAgo < 24) {
-              lastSync = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
-            } else {
-              lastSync = `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
-            }
+          let status: "online" | "offline" | "maintenance" = "offline";
+          if (player.isActive && lastSeen >= fiveMinutesAgo) {
+            status = "online";
+          } else if (!player.isActive) {
+            status = "maintenance";
+          } else if (lastSeen >= fortyEightHoursAgo) {
+            status = "maintenance";
+          } else {
+            status = "offline";
+          }
 
-            // Get BMI count for this screen (placeholder - would need API endpoint)
-            const todayData = 0; // TODO: Add API endpoint for today's BMI count per screen
-            const totalData = 0; // TODO: Add API endpoint for total BMI count per screen
+          const timeDiff = Math.max(0, Date.now() - lastSeen.getTime());
+          const minutesAgo = Math.floor(timeDiff / (1000 * 60));
+          const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
+          const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
 
-            return {
-              screenId: player.screenId,
-              location: player.location || player.deviceName || "Unknown Location",
-              status,
-              lastSync,
-              todayData,
-              totalData,
-            };
-          })
-        );
-        
+          let lastSync = "";
+          if (minutesAgo < 60) {
+            lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
+          } else if (hoursAgo < 24) {
+            lastSync = `${hoursAgo} ${hoursAgo === 1 ? 'hour' : 'hours'} ago`;
+          } else {
+            lastSync = `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
+          }
+
+          return {
+            screenId: player.screenId,
+            location: player.location || player.deviceName || "Unknown Location",
+            status,
+            lastSync,
+            todayData: player.todayData || 0,
+            totalData: player.totalData || 0,
+          };
+        });
+
         setScreens(screensData);
       }
       setLoading(false);
@@ -122,22 +107,25 @@ const ScreenStatusTable = () => {
             <h3 className="text-lg font-semibold text-foreground">Screen Status Overview</h3>
             <p className="text-sm text-muted-foreground">Real-time monitoring of all BMI kiosks</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1">
-              <Circle className="w-2 h-2 fill-success text-success" />
-              {onlineCount} Online
-            </Badge>
-            <Badge variant="outline" className="gap-1">
-              <Circle className="w-2 h-2 fill-danger text-danger" />
-              {offlineCount} Offline
-            </Badge>
-            <Button 
-              variant="outline" 
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 order-2 sm:order-1">
+              <Badge variant="outline" className="gap-1 px-1.5 py-0">
+                <Circle className="w-1.5 h-1.5 fill-success text-success" />
+                <span className="text-[10px] sm:text-xs">{onlineCount} Online</span>
+              </Badge>
+              <Badge variant="outline" className="gap-1 px-1.5 py-0">
+                <Circle className="w-1.5 h-1.5 fill-danger text-danger" />
+                <span className="text-[10px] sm:text-xs">{offlineCount} Offline</span>
+              </Badge>
+            </div>
+            <Button
+              variant="outline"
               size="sm"
+              className="h-7 px-2 text-xs order-1 sm:order-2 ml-auto sm:ml-0"
               onClick={() => navigate("/screens")}
             >
-              View All
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <span className="hidden xs:inline">View All</span>
+              <ArrowRight className="w-3 h-3 xs:ml-2" />
             </Button>
           </div>
         </div>
@@ -151,7 +139,7 @@ const ScreenStatusTable = () => {
             {screens.map((screen) => (
               <div
                 key={screen.screenId}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
               >
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">

@@ -6,14 +6,15 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  trend?: {
+  trend?: string | {
     value: number;
     isPositive: boolean;
   };
+  trendUp?: boolean;
   variant?: "default" | "success" | "warning" | "danger" | "info";
 }
 
-const StatCard = ({ title, value, icon: Icon, trend, variant = "default" }: StatCardProps) => {
+const StatCard = ({ title, value, icon: Icon, trend, trendUp, variant = "default" }: StatCardProps) => {
   const variantStyles = {
     default: "from-primary/10 to-primary/5 border-primary/20",
     success: "from-success/10 to-success/5 border-success/20",
@@ -30,29 +31,46 @@ const StatCard = ({ title, value, icon: Icon, trend, variant = "default" }: Stat
     info: "bg-info/10 text-info",
   };
 
+  const renderTrend = () => {
+    if (!trend) return null;
+
+    if (typeof trend === 'string') {
+      return (
+        <p className={cn(
+          "text-[10px] sm:text-xs font-medium",
+          trendUp ? "text-success" : "text-muted-foreground"
+        )}>
+          {trend}
+        </p>
+      );
+    }
+
+    return (
+      <p className={cn(
+        "text-[10px] sm:text-xs font-medium",
+        trend.isPositive ? "text-success" : "text-danger"
+      )}>
+        {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}% <span className="hidden xs:inline">vs last period</span>
+      </p>
+    );
+  };
+
   return (
     <Card className={cn(
-      "p-6 bg-gradient-to-br border transition-all hover:shadow-md",
+      "p-4 sm:p-6 bg-gradient-to-br border transition-all hover:shadow-md",
       variantStyles[variant]
     )}>
       <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
-          {trend && (
-            <p className={cn(
-              "text-xs font-medium",
-              trend.isPositive ? "text-success" : "text-danger"
-            )}>
-              {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}% vs last period
-            </p>
-          )}
+        <div className="space-y-1 sm:space-y-2">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-foreground">{value}</p>
+          {renderTrend()}
         </div>
         <div className={cn(
-          "p-3 rounded-xl",
+          "p-2 sm:p-3 rounded-xl",
           iconStyles[variant]
         )}>
-          <Icon className="w-6 h-6" />
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
       </div>
     </Card>

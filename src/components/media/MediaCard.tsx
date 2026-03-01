@@ -59,19 +59,41 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center gap-2">
-                <FileVideo className="w-16 h-16 text-muted-foreground" />
-                {media.duration && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>{media.duration}</span>
-                  </div>
-                )}
+              <div className="relative w-full h-full bg-black">
+                <video
+                  src={`${media.url}#t=0.1`}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  crossOrigin="anonymous"
+                  onMouseEnter={(e) => e.currentTarget.play()}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.pause();
+                    e.currentTarget.currentTime = 0.1;
+                  }}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none group-hover:opacity-0 transition-opacity bg-black/20">
+                  <FileVideo className="w-12 h-12 text-white/70" />
+                  {media.duration && (
+                    <div className="flex items-center gap-1 text-sm text-white/80 font-medium">
+                      <Clock className="w-4 h-4" />
+                      <span>{media.duration}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-            
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+
+            {/* Mobile preview-only trigger area */}
+            <div
+              className="absolute inset-0 md:hidden z-10"
+              onClick={() => setShowPreview(true)}
+              aria-label="Preview"
+            />
+
+            {/* Hover overlay (Desktop only) */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 md:group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -83,7 +105,7 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
             </div>
           </div>
         </CardContent>
-        
+
         <CardFooter className="flex flex-col items-start gap-3 p-4">
           <div className="w-full space-y-2">
             <div className="flex items-start justify-between gap-2">
@@ -92,7 +114,7 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
                 {media.type}
               </Badge>
             </div>
-            
+
             {media.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {media.tags.map((tag, index) => (
@@ -102,22 +124,33 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
                 ))}
               </div>
             )}
-            
+
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{media.uploadDate}</span>
               <span>{media.size}</span>
             </div>
           </div>
-          
-          <Button
-            variant="destructive"
-            size="sm"
-            className="w-full"
-            onClick={() => setShowDeleteDialog(true)}
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Delete
-          </Button>
+
+          <div className="flex w-full gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 md:hidden"
+              onClick={() => setShowPreview(true)}
+            >
+              <Eye className="w-4 h-4 mr-1" />
+              Preview
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
+            </Button>
+          </div>
         </CardFooter>
       </Card>
 
@@ -160,6 +193,7 @@ export const MediaCard = ({ media, onDelete }: MediaCardProps) => {
                   controls
                   className="w-full h-auto max-h-[70vh]"
                   preload="metadata"
+                  crossOrigin="anonymous"
                   style={{ maxWidth: '100%' }}
                 >
                   Your browser does not support the video tag.

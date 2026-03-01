@@ -452,15 +452,15 @@ const AdminManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="px-2 py-2 whitespace-nowrap">Name</TableHead>
-                <TableHead className="px-2 py-2 whitespace-nowrap">Email</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap hidden lg:table-cell">Email</TableHead>
                 <TableHead className="px-2 py-2 whitespace-nowrap">Role</TableHead>
-                <TableHead className="px-2 py-2 whitespace-nowrap">Status</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap hidden sm:table-cell">Status</TableHead>
                 <TableHead className="px-2 py-2 whitespace-nowrap">SMS limit</TableHead>
-                <TableHead className="px-2 py-2 whitespace-nowrap">SMS used</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap hidden md:table-cell">SMS used</TableHead>
                 <TableHead className="px-2 py-2 whitespace-nowrap">WA limit</TableHead>
-                <TableHead className="px-2 py-2 whitespace-nowrap">WA used</TableHead>
-                <TableHead className="px-2 py-2 whitespace-nowrap">Screens</TableHead>
-                <TableHead className="px-2 py-2 whitespace-nowrap">Created</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap hidden md:table-cell">WA used</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap hidden sm:table-cell">Screens</TableHead>
+                <TableHead className="px-2 py-2 whitespace-nowrap hidden xl:table-cell">Created</TableHead>
                 <TableHead className="px-2 py-2 text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -475,13 +475,13 @@ const AdminManagement = () => {
                 admins.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell className="px-2 py-2 font-medium whitespace-nowrap">{admin.name}</TableCell>
-                    <TableCell className="px-2 py-2 whitespace-nowrap max-w-[160px] truncate">{admin.email}</TableCell>
+                    <TableCell className="px-2 py-2 whitespace-nowrap max-w-[160px] truncate hidden lg:table-cell">{admin.email}</TableCell>
                     <TableCell className="px-2 py-2">
                       <Badge variant={admin.role === "super_admin" ? "default" : "secondary"} className="text-xs px-1.5 py-0.5 whitespace-nowrap">
                         {admin.role === "super_admin" ? "Super" : "Admin"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-2 py-2">
+                    <TableCell className="px-2 py-2 hidden sm:table-cell">
                       <Badge variant={admin.isActive ? "default" : "destructive"} className="text-xs px-1.5 py-0.5">
                         {admin.isActive ? "Active" : "Inactive"}
                       </Badge>
@@ -500,7 +500,7 @@ const AdminManagement = () => {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-2 py-2 whitespace-nowrap">
+                    <TableCell className="px-2 py-2 whitespace-nowrap hidden md:table-cell">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalMessageLimit != null ? (
@@ -526,7 +526,7 @@ const AdminManagement = () => {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-2 py-2 whitespace-nowrap">
+                    <TableCell className="px-2 py-2 whitespace-nowrap hidden md:table-cell">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : admin.totalWhatsAppLimit != null ? (
@@ -538,14 +538,14 @@ const AdminManagement = () => {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-2 py-2 whitespace-nowrap">
+                    <TableCell className="px-2 py-2 whitespace-nowrap hidden sm:table-cell">
                       {admin.role === "super_admin" ? (
                         <span className="text-muted-foreground">All</span>
                       ) : (
                         <span>{admin.assignedScreenIds?.length || 0}</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-2 py-2 whitespace-nowrap">
+                    <TableCell className="px-2 py-2 whitespace-nowrap hidden xl:table-cell">
                       {new Date(admin.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="px-2 py-2 text-right">

@@ -5,14 +5,14 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  Save, 
-  Eye, 
-  Clock, 
-  Loader2, 
-  Image, 
-  Video, 
+import {
+  ArrowLeft,
+  Save,
+  Eye,
+  Clock,
+  Loader2,
+  Image,
+  Video,
   GripVertical,
   Plus,
   X,
@@ -67,7 +67,7 @@ const PlaylistEditor = () => {
   const filteredMedia = useMemo(() => {
     if (!searchQuery.trim()) return safeMediaLibrary;
     const query = searchQuery.toLowerCase();
-    return safeMediaLibrary.filter(media => 
+    return safeMediaLibrary.filter(media =>
       (media.name || '').toLowerCase().includes(query) ||
       (media.publicId || '').toLowerCase().includes(query)
     );
@@ -110,18 +110,18 @@ const PlaylistEditor = () => {
     try {
       setLoadingMedia(true);
       const response = await api.getAllMedia();
-      
+
       let media = [];
       if (Array.isArray(response)) {
         media = response;
-      } else if (response && Array.isArray(response.media)) {
-        media = response.media;
-      } else if (response && Array.isArray(response.data)) {
-        media = response.data;
-      } else if (response && response.ok && Array.isArray(response.media)) {
-        media = response.media;
+      } else if (response && Array.isArray((response as any).media)) {
+        media = (response as any).media;
+      } else if (response && Array.isArray((response as any).data)) {
+        media = (response as any).data;
+      } else if (response && (response as any).ok && Array.isArray((response as any).media)) {
+        media = (response as any).media;
       }
-      
+
       setMediaLibrary(media);
     } catch (error) {
       console.error('[PLAYLIST_EDITOR] Error loading media library:', error);
@@ -209,11 +209,11 @@ const PlaylistEditor = () => {
   };
 
   const calculateTotalDuration = () => {
-    const totalSeconds = slots.reduce((sum, slot) => {
+    const totalSeconds = Math.max(0, slots.reduce((sum, slot) => {
       return sum + (slot?.duration || 0);
-    }, 0);
+    }, 0));
     const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+    const seconds = Math.floor(totalSeconds % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
@@ -252,7 +252,7 @@ const PlaylistEditor = () => {
           name: playlistName.trim(),
           slots,
         }) as { ok: boolean; playlist: { id: string } };
-        
+
         if (response.ok && response.playlist) {
           toast({
             title: "Playlist created",
@@ -323,17 +323,17 @@ const PlaylistEditor = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handlePreview} 
+                <Button
+                  variant="outline"
+                  onClick={handlePreview}
                   disabled={filledSlots === 0}
                   className="hidden sm:flex"
                 >
                   <Eye className="mr-2 h-4 w-4" />
                   Preview
                 </Button>
-                <Button 
-                  onClick={handleSave} 
+                <Button
+                  onClick={handleSave}
                   disabled={filledSlots === 0 || saving || !playlistName.trim()}
                   className="bg-primary hover:bg-primary/90"
                 >
@@ -402,13 +402,12 @@ const PlaylistEditor = () => {
               {slots.map((slot, index) => (
                 <Card
                   key={index}
-                  className={`relative transition-all duration-200 ${
-                    dragOverSlot === index
-                      ? "border-primary border-2 bg-primary/10 scale-105 shadow-lg"
-                      : draggedSlot === index
+                  className={`relative transition-all duration-200 ${dragOverSlot === index
+                    ? "border-primary border-2 bg-primary/10 scale-105 shadow-lg"
+                    : draggedSlot === index
                       ? "opacity-50 border-border"
                       : "border-border hover:border-primary/50"
-                  }`}
+                    }`}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, index)}
@@ -465,7 +464,7 @@ const PlaylistEditor = () => {
                         <p className="text-sm font-medium text-foreground truncate">
                           {slot.name}
                         </p>
-                        
+
                         {/* Duration Control */}
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">
@@ -487,7 +486,7 @@ const PlaylistEditor = () => {
                       </div>
                     </div>
                   ) : (
-                    <div 
+                    <div
                       className="p-6 flex flex-col items-center justify-center text-center min-h-[200px] cursor-pointer hover:bg-muted/50 transition-colors"
                     >
                       <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
@@ -532,7 +531,7 @@ const PlaylistEditor = () => {
                     )}
                   </Button>
                 </div>
-                
+
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -569,7 +568,7 @@ const PlaylistEditor = () => {
                       const isImage = media.type === 'image' || media.resource_type === 'image';
                       const isVideo = media.type === 'video' || media.resource_type === 'video';
                       const mediaType = isVideo ? 'video' : 'image';
-                      
+
                       const mediaData: SlotMedia = {
                         id: media.id || media.publicId,
                         name: media.name || 'Untitled',

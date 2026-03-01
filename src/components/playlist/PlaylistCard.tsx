@@ -54,11 +54,15 @@ export const PlaylistCard = ({ playlist, onDelete, onDuplicate }: PlaylistCardPr
   };
 
   const formatDuration = (duration: string) => {
-  // duration comes like: "1:44.73913800000001"
-  const [min, sec] = duration.split(":");
-  const wholeSec = Math.floor(Number(sec));
-  return `${min} min ${wholeSec} sec`;
-};
+    // duration comes like: "1:44.73913800000001" or potentially negative due to TZ issues
+    if (!duration || typeof duration !== 'string' || !duration.includes(':')) {
+      return "0 min 0 sec";
+    }
+    const [minStr, secStr] = duration.split(":");
+    const min = Math.max(0, parseInt(minStr) || 0);
+    const wholeSec = Math.max(0, Math.floor(Number(secStr) || 0));
+    return `${min} min ${wholeSec} sec`;
+  };
 
 
   return (

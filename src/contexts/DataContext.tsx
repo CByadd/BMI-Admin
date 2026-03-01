@@ -47,33 +47,33 @@ interface DataContextType {
   screens: Screen[];
   playlists: Playlist[];
   schedules: Schedule[];
-  
+
   // Loading states
   isLoadingScreens: boolean;
   isLoadingPlaylists: boolean;
   isLoadingSchedules: boolean;
-  
+
   // Actions
   refreshScreens: () => Promise<void>;
   refreshPlaylists: () => Promise<void>;
   refreshSchedules: () => Promise<void>;
   refreshAll: () => Promise<void>;
-  
+
   // Update methods
   updateScreen: (screenId: string, updates: Partial<Screen>) => void;
   updatePlaylist: (playlistId: string, updates: Partial<Playlist>) => void;
   updateSchedule: (scheduleId: string, updates: Partial<Schedule>) => void;
-  
+
   // Delete methods
   removeScreen: (screenId: string) => void;
   removePlaylist: (playlistId: string) => void;
   removeSchedule: (scheduleId: string) => void;
-  
+
   // Add methods
   addScreen: (screen: Screen) => void;
   addPlaylist: (playlist: Playlist) => void;
   addSchedule: (schedule: Schedule) => void;
-  
+
   // Get methods
   getScreen: (screenId: string) => Screen | undefined;
   getPlaylist: (playlistId: string) => Playlist | undefined;
@@ -87,7 +87,7 @@ const isCacheExpired = (): boolean => {
   try {
     const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC);
     if (!lastSync) return true;
-    
+
     const lastSyncTime = parseInt(lastSync, 10);
     const now = Date.now();
     return (now - lastSyncTime) > CACHE_EXPIRY_MS;
@@ -109,9 +109,9 @@ const saveLastSync = () => {
 const transformPlayerToScreen = (player: any): Screen => {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-  
+
   const lastSeen = new Date(player.lastSeen);
-  
+
   // Status logic:
   // - Online: isActive && lastSeen within 5 minutes
   // - Offline: isActive && lastSeen >= 48 hours ago (system is active but hasn't been seen for 48 hours)
@@ -131,11 +131,11 @@ const transformPlayerToScreen = (player: any): Screen => {
   }
 
   // Calculate time ago
-  const timeDiff = Date.now() - lastSeen.getTime();
+  const timeDiff = Math.max(0, Date.now() - lastSeen.getTime());
   const minutesAgo = Math.floor(timeDiff / (1000 * 60));
   const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
   const daysAgo = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-  
+
   let lastSync = "";
   if (minutesAgo < 60) {
     lastSync = `${minutesAgo} ${minutesAgo === 1 ? 'min' : 'mins'} ago`;
@@ -169,7 +169,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [screens, setScreens] = useState<Screen[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  
+
   const [isLoadingScreens, setIsLoadingScreens] = useState(false);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
@@ -183,13 +183,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (cachedScreens) {
           setScreens(JSON.parse(cachedScreens));
         }
-        
+
         // Load playlists
         const cachedPlaylists = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
         if (cachedPlaylists) {
           setPlaylists(JSON.parse(cachedPlaylists));
         }
-        
+
         // Load schedules
         const cachedSchedules = localStorage.getItem(STORAGE_KEYS.SCHEDULES);
         if (cachedSchedules) {
@@ -201,7 +201,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     loadCachedData();
-    
+
     // Refresh if cache is expired
     if (isCacheExpired()) {
       refreshAll();
@@ -238,7 +238,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoadingScreens(true);
     try {
       const response = await api.getAllPlayers() as { ok: boolean; players: any[] };
-      
+
       if (response.ok && response.players) {
         const screensData: Screen[] = response.players.map(transformPlayerToScreen);
         setScreens(screensData);
@@ -294,21 +294,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Update screen
   const updateScreen = useCallback((screenId: string, updates: Partial<Screen>) => {
-    setScreens(prev => prev.map(screen => 
+    setScreens(prev => prev.map(screen =>
       screen.id === screenId ? { ...screen, ...updates } : screen
     ));
   }, []);
 
   // Update playlist
   const updatePlaylist = useCallback((playlistId: string, updates: Partial<Playlist>) => {
-    setPlaylists(prev => prev.map(playlist => 
+    setPlaylists(prev => prev.map(playlist =>
       playlist.id === playlistId ? { ...playlist, ...updates } : playlist
     ));
   }, []);
 
   // Update schedule
   const updateSchedule = useCallback((scheduleId: string, updates: Partial<Schedule>) => {
-    setSchedules(prev => prev.map(schedule => 
+    setSchedules(prev => prev.map(schedule =>
       schedule.id === scheduleId ? { ...schedule, ...updates } : schedule
     ));
   }, []);

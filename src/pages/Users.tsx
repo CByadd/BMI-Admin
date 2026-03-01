@@ -292,12 +292,12 @@ const Users = () => {
                     <TableHead className="w-[40px] px-2 py-2">#</TableHead>
                     <TableHead className="px-2 py-2 whitespace-nowrap">Name</TableHead>
                     <TableHead className="px-2 py-2 whitespace-nowrap">Mobile</TableHead>
-                    <TableHead className="px-2 py-2 whitespace-nowrap">Joined</TableHead>
-                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">BMI Records</TableHead>
+                    <TableHead className="px-2 py-2 whitespace-nowrap hidden lg:table-cell">Joined</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap hidden sm:table-cell">BMI Records</TableHead>
                     <TableHead className="px-2 py-2 text-center whitespace-nowrap">BMI</TableHead>
                     <TableHead className="px-2 py-2 text-center whitespace-nowrap">Category</TableHead>
-                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">Screen ID</TableHead>
-                    <TableHead className="px-2 py-2 text-center whitespace-nowrap">Updated</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap hidden md:table-cell">Screen ID</TableHead>
+                    <TableHead className="px-2 py-2 text-center whitespace-nowrap hidden xl:table-cell">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -312,10 +312,10 @@ const Users = () => {
                       <TableCell className="px-2 py-2 whitespace-nowrap text-muted-foreground">
                         {user.mobile}
                       </TableCell>
-                      <TableCell className="px-2 py-2 whitespace-nowrap text-muted-foreground">
+                      <TableCell className="px-2 py-2 whitespace-nowrap text-muted-foreground hidden lg:table-cell">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="px-2 py-2 text-center">
+                      <TableCell className="px-2 py-2 text-center hidden sm:table-cell">
                         {user.totalBMIRecords !== undefined ? (
                           <Badge variant="secondary" className="font-semibold text-xs px-1.5 py-0.5">
                             {user.totalBMIRecords}
@@ -345,7 +345,7 @@ const Users = () => {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-2 py-2 text-center">
+                      <TableCell className="px-2 py-2 text-center hidden md:table-cell">
                         {user.latestBMI ? (
                           <Badge variant="outline" className="font-mono text-xs px-1.5 py-0.5">
                             {user.latestBMI.screenId}
@@ -354,7 +354,7 @@ const Users = () => {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-2 py-2 text-center whitespace-nowrap text-muted-foreground">
+                      <TableCell className="px-2 py-2 text-center whitespace-nowrap text-muted-foreground hidden xl:table-cell">
                         {user.latestBMI ? (
                           new Date(user.latestBMI.timestamp).toLocaleDateString()
                         ) : (
