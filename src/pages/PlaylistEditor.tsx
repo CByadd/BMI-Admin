@@ -37,6 +37,14 @@ interface SlotMedia {
   thumbnail?: string;
 }
 
+const DEFAULT_IMAGE_DURATION = 10;
+
+const normalizeVideoDuration = (value: unknown): number | null => {
+  const numeric = typeof value === "string" ? parseFloat(value) : Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return Math.max(1, Math.round(numeric));
+};
+
 const PlaylistEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -54,6 +62,7 @@ const PlaylistEditor = () => {
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [sidePanelFolderStack, setSidePanelFolderStack] = useState<{ id: string | undefined; name: string }[]>([]);
   const [sidePanelFolders, setSidePanelFolders] = useState<any[]>([]);
+  const [resolvedVideoDurations, setResolvedVideoDurations] = useState<Record<string, number>>({});
 
   const currentPanelFolder = useMemo(() => 
     sidePanelFolderStack.length > 0 ? sidePanelFolderStack[sidePanelFolderStack.length - 1] : null
@@ -94,6 +103,71 @@ const PlaylistEditor = () => {
   useEffect(() => {
     loadSidePanelContent();
   }, [currentPanelFolder?.id, searchQuery]);
+
+  useEffect(() => {
+    const missingDurationVideos = safeMediaLibrary.filter((media) => {
+      const isVideo = media.type === 'video' || media.resource_type === 'video';
+      const url = media.url || media.secure_url;
+      return isVideo && url && !normalizeVideoDuration(media.duration) && !resolvedVideoDurations[url];
+    });
+
+    if (missingDurationVideos.length === 0) return;
+
+    let cancelled = false;
+
+    const readVideoDuration = (url: string) =>
+      new Promise<number | null>((resolve) => {
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.crossOrigin = "anonymous";
+        video.src = url;
+
+        const cleanup = () => {
+          video.removeAttribute("src");
+          video.load();
+        };
+
+        video.onloadedmetadata = () => {
+          const duration = normalizeVideoDuration(video.duration);
+          cleanup();
+          resolve(duration);
+        };
+
+        video.onerror = () => {
+          cleanup();
+          resolve(null);
+        };
+      });
+
+    (async () => {
+      const updates: Record<string, number> = {};
+      for (const media of missingDurationVideos) {
+        const url = media.url || media.secure_url;
+        const duration = await readVideoDuration(url);
+        if (duration) {
+          updates[url] = duration;
+        }
+      }
+
+      if (!cancelled && Object.keys(updates).length > 0) {
+        setResolvedVideoDurations((prev) => ({ ...prev, ...updates }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [safeMediaLibrary, resolvedVideoDurations]);
+
+  useEffect(() => {
+    if (Object.keys(resolvedVideoDurations).length === 0) return;
+    setSlots((prev) => prev.map((slot) => {
+      if (!slot || slot.type !== "video") return slot;
+      const resolvedDuration = resolvedVideoDurations[slot.url];
+      if (!resolvedDuration || slot.duration === resolvedDuration) return slot;
+      return { ...slot, duration: resolvedDuration };
+    }));
+  }, [resolvedVideoDurations]);
 
   const loadSidePanelContent = async () => {
     try {
@@ -666,14 +740,18 @@ const PlaylistEditor = () => {
                       const isImage = media.type === 'image' || media.resource_type === 'image';
                       const isVideo = media.type === 'video' || media.resource_type === 'video';
                       const mediaType = isVideo ? 'video' : 'image';
+                      const mediaUrl = media.url || media.secure_url;
+                      const resolvedVideoDuration = isVideo
+                        ? normalizeVideoDuration(media.duration) ?? resolvedVideoDurations[mediaUrl] ?? 0
+                        : null;
 
                       const mediaData: SlotMedia = {
                         id: media.id || media.publicId,
                         name: media.name || 'Untitled',
                         type: mediaType,
-                        url: media.url || media.secure_url,
-                        duration: isVideo ? (media.duration || 30) : 10,
-                        thumbnail: isImage ? (media.url || media.secure_url) : undefined,
+                        url: mediaUrl,
+                        duration: isVideo ? (resolvedVideoDuration || DEFAULT_IMAGE_DURATION) : DEFAULT_IMAGE_DURATION,
+                        thumbnail: isImage ? mediaUrl : undefined,
                       };
 
                       return (
@@ -691,14 +769,14 @@ const PlaylistEditor = () => {
                           <div className="aspect-video bg-muted relative overflow-hidden">
                             {isImage ? (
                               <img
-                                src={media.url || media.secure_url}
+                                src={mediaUrl}
                                 alt={media.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
                             ) : (
                               <div className="w-full h-full bg-black flex items-center justify-center overflow-hidden">
                                 <video
-                                  src={`${media.url || media.secure_url}#t=0.1`}
+                                  src={`${mediaUrl}#t=0.1`}
                                   className="w-full h-full object-cover"
                                   muted
                                   playsInline
@@ -734,7 +812,7 @@ const PlaylistEditor = () => {
                               {media.name || 'Untitled'}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {mediaType === 'video' ? `${media.duration || 30}s` : 'Image'}
+                              {mediaType === 'video' ? `${resolvedVideoDuration || "..." }s` : 'Image'}
                             </p>
                           </div>
                         </Card>

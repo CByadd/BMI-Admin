@@ -108,6 +108,38 @@ const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB
     return true;
   };
 
+  const readVideoDuration = (file: File): Promise<number | null> =>
+    new Promise((resolve) => {
+      if (!file.type.startsWith("video/")) {
+        resolve(null);
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.src = objectUrl;
+
+      const cleanup = () => {
+        URL.revokeObjectURL(objectUrl);
+        video.removeAttribute("src");
+        video.load();
+      };
+
+      video.onloadedmetadata = () => {
+        const duration = Number.isFinite(video.duration) && video.duration > 0
+          ? Math.max(1, Math.round(video.duration))
+          : null;
+        cleanup();
+        resolve(duration);
+      };
+
+      video.onerror = () => {
+        cleanup();
+        resolve(null);
+      };
+    });
+
   const handleUpload = async () => {
     if (files.length === 0) {
       toast({
@@ -125,9 +157,18 @@ const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB
 
       // Create FormData for file upload
       const formData = new FormData();
+      const fileMetadata = await Promise.all(files.map(async (file, index) => ({
+        index,
+        originalName: file.name,
+        size: file.size,
+        type: file.type,
+        duration: await readVideoDuration(file),
+      })));
+
       files.forEach((file) => {
         formData.append('files', file);
       });
+      formData.append('fileMetadata', JSON.stringify(fileMetadata));
 
       if (name) {
         formData.append('name', name);

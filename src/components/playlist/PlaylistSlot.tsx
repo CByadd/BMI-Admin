@@ -15,6 +15,14 @@ interface SlotMedia {
   thumbnail?: string;
 }
 
+const DEFAULT_IMAGE_DURATION = 10;
+
+const normalizeVideoDuration = (value: unknown): number | null => {
+  const numeric = typeof value === "string" ? parseFloat(value) : Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return Math.max(1, Math.round(numeric));
+};
+
 interface PlaylistSlotProps {
   slotNumber: number;
   media: SlotMedia | null;
@@ -85,7 +93,7 @@ export const PlaylistSlot = ({
           name: file.name,
           type: file.type.startsWith("video") ? "video" : "image",
           url: URL.createObjectURL(file),
-          duration: file.type.startsWith("video") ? 30 : 10,
+          duration: file.type.startsWith("video") ? (normalizeVideoDuration((file as File & { duration?: number }).duration) || DEFAULT_IMAGE_DURATION) : DEFAULT_IMAGE_DURATION,
         };
         onMediaAdd(slotNumber, mockMedia);
         return;
@@ -104,7 +112,7 @@ export const PlaylistSlot = ({
         name: file.name,
         type: file.type.startsWith("video") ? "video" : "image",
         url: URL.createObjectURL(file),
-        duration: file.type.startsWith("video") ? 30 : 10,
+        duration: file.type.startsWith("video") ? (normalizeVideoDuration((file as File & { duration?: number }).duration) || DEFAULT_IMAGE_DURATION) : DEFAULT_IMAGE_DURATION,
       };
       onMediaAdd(slotNumber, mockMedia);
     }
