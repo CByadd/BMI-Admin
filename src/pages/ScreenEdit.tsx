@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Upload, X, Loader2, CalendarIcon, Users, User, Music, DollarSign, Layers, Activity } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, CalendarIcon, Users, User, Music, DollarSign, Layers, Activity, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
@@ -288,11 +288,11 @@ const ScreenEdit = () => {
         return;
       }
 
-      // Validate file size (5 MB max per file)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (4 MB max per file)
+      if (file.size > 4 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Logo file must be less than 5 MB",
+          description: "Logo file must be less than 4 MB",
           variant: "destructive",
         });
         return;
@@ -1125,11 +1125,11 @@ const ScreenEdit = () => {
                                 return;
                               }
 
-                              // Validate file size (5 MB max per file)
-                              if (file.size > 5 * 1024 * 1024) {
+                              // Validate file size (4 MB max per file)
+                              if (file.size > 4 * 1024 * 1024) {
                                 toast({
                                   title: "File too large",
-                                  description: `Logo must be less than 5 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                  description: `Logo must be less than 4 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
                                   variant: "destructive",
                                 });
                                 e.target.value = '';
@@ -1154,13 +1154,14 @@ const ScreenEdit = () => {
                           />
                           <p className="text-[10px] text-muted-foreground">
                             {logoFile ? (
-                              <span className="text-primary font-medium truncate block">
+                              <span className="text-primary font-bold">
+                                50% Screen Width Drawer
                                 {logoFile.name.length > 15 ? `${logoFile.name.substring(0, 15)}...` : logoFile.name}
                               </span>
                             ) : logoUrl ? (
                               <span className="text-green-600">Uploaded</span>
                             ) : (
-                              <span>Max 5 MB</span>
+                              <span>Max 4 MB</span>
                             )}
                           </p>
                         </div>
@@ -1218,120 +1219,6 @@ const ScreenEdit = () => {
                   )}
                 </div>
 
-                {/* Date Range Configuration for Playlist */}
-                {/* {formData.playlistId && formData.playlistId !== "none" && (
-                  <div className="space-y-4 pt-4 border-t">
-                    <Label className="text-sm font-medium">Playlist Date Range (Optional)</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Configure when this playlist should be active. Leave empty for always active.
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="startDate" className="text-xs">Start Date</Label>
-                          {formData.playlistStartDate && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={() => setFormData({ ...formData, playlistStartDate: null })}
-                            >
-                              Clear
-                            </Button>
-                          )}
-                        </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.playlistStartDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formData.playlistStartDate ? (
-                                format(formData.playlistStartDate, "PPP")
-                              ) : (
-                                <span>Pick a start date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={formData.playlistStartDate || undefined}
-                              onSelect={(date) => setFormData({ ...formData, playlistStartDate: date || null })}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="endDate" className="text-xs">End Date</Label>
-                          {formData.playlistEndDate && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={() => setFormData({ ...formData, playlistEndDate: null })}
-                            >
-                              Clear
-                            </Button>
-                          )}
-                        </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.playlistEndDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formData.playlistEndDate ? (
-                                format(formData.playlistEndDate, "PPP")
-                              ) : (
-                                <span>Pick an end date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={formData.playlistEndDate || undefined}
-                              onSelect={(date) => setFormData({ ...formData, playlistEndDate: date || null })}
-                              initialFocus
-                              disabled={(date) => {
-                                if (formData.playlistStartDate) {
-                                  return date < formData.playlistStartDate;
-                                }
-                                return false;
-                              }}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-
-                    {formData.playlistStartDate && formData.playlistEndDate && formData.playlistEndDate < formData.playlistStartDate && (
-                      <p className="text-xs text-destructive">
-                        End date must be after start date
-                      </p>
-                    )}
-                  </div>
-                )}
-                 */}
-
-
-
-
                 {/* Flow Drawer Toggle */}
                 <div className="flex items-center justify-between space-x-2 py-2 border-t">
                   <div className="space-y-0.5">
@@ -1384,6 +1271,43 @@ const ScreenEdit = () => {
                       <p className="text-xs text-muted-foreground">
                         Select the number of image slots for the flow drawer. Each slot can have an image.
                       </p>
+                      {(() => {
+                        const sw = (screen as any)?.screenWidth || 1080;
+                        const sh = (screen as any)?.screenHeight || 1920;
+                        const isPortrait = sh > sw;
+                        const drawerW = sw / 2;
+                        const slotW = drawerW;
+                        const slotH = (sh) / formData.flowDrawerSlotCount;
+                        const ratio = slotW / slotH;
+
+                        return (
+                          <div className="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-primary" />
+                              <p className="text-xs font-semibold text-primary">
+                                Optimized for: <span className="font-bold">{sw} x {sh}</span> {isPortrait ? '(Portrait)' : '(Landscape)'} screen
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Perfect Aspect Ratio</p>
+                                <p className="text-sm font-bold text-foreground">
+                                  {ratio > 1 ? `${ratio.toFixed(2)} : 1` : `1 : ${(1/ratio).toFixed(2)}`}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Recommended Dimensions</p>
+                                <p className="text-sm font-bold text-foreground">
+                                  {Math.round(slotW)} x {Math.round(slotH)} px
+                                </p>
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground italic border-t pt-2">
+                              * Drawer width is now 50% of the screen width.
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Flow Drawer Images Section */}
@@ -1474,7 +1398,19 @@ const ScreenEdit = () => {
 
                                     {/* Image Preview */}
                                     {slot.preview ? (
-                                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-border bg-muted/50">
+                                      <div 
+                                        className="relative w-full rounded-lg overflow-hidden border-2 border-border bg-muted/50"
+                                        style={{ 
+                                          aspectRatio: (() => {
+                                            const sw = (screen as any)?.screenWidth || 1080;
+                                            const sh = (screen as any)?.screenHeight || 1920;
+                                            const drawerW = sw / 2;
+                                            const slotW = drawerW;
+                                            const slotH = sh / formData.flowDrawerSlotCount;
+                                            return slotW / slotH;
+                                          })()
+                                        }}
+                                      >
                                         <img
                                           src={slot.preview}
                                           alt={`Flow drawer slot ${index + 1}`}
@@ -1520,7 +1456,19 @@ const ScreenEdit = () => {
                                         )}
                                       </div>
                                     ) : (
-                                      <div className="relative w-full aspect-video rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex flex-col items-center justify-center gap-2 p-4 transition-colors hover:border-primary/50 hover:bg-muted/50">
+                                      <div 
+                                        className="relative w-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex flex-col items-center justify-center gap-2 p-4 transition-colors hover:border-primary/50 hover:bg-muted/50"
+                                        style={{ 
+                                          aspectRatio: (() => {
+                                            const sw = (screen as any)?.screenWidth || 1080;
+                                            const sh = (screen as any)?.screenHeight || 1920;
+                                            const drawerW = sw / 2;
+                                            const slotW = drawerW;
+                                            const slotH = sh / formData.flowDrawerSlotCount;
+                                            return slotW / slotH;
+                                          })()
+                                        }}
+                                      >
                                         {isUploading ? (
                                           <>
                                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -1559,11 +1507,11 @@ const ScreenEdit = () => {
                                             return;
                                           }
 
-                                          // Validate file size (5 MB max per file)
-                                          if (file.size > 5 * 1024 * 1024) {
+                                          // Validate file size (4 MB max per file)
+                                          if (file.size > 4 * 1024 * 1024) {
                                             toast({
                                               title: "File too large",
-                                              description: `Image must be less than 5 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                              description: `Image must be less than 4 MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
                                               variant: "destructive",
                                             });
                                             e.target.value = ''; // Reset input
@@ -1685,7 +1633,7 @@ const ScreenEdit = () => {
                                         ) : slot.url ? (
                                           <span className="text-green-600">Image uploaded</span>
                                         ) : (
-                                          <span>Max size: 1.3 MB • PNG, JPG, GIF</span>
+                                          <span>Max size: 4 MB • PNG, JPG, GIF</span>
                                         )}
                                       </p>
                                     </div>
@@ -1706,55 +1654,54 @@ const ScreenEdit = () => {
                               </p>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                              {/* Portrait Screen Container (9:16 aspect ratio) */}
-                              <div className="relative w-full mx-auto" style={{ aspectRatio: '9/16', maxWidth: '200px' }}>
-                                {/* Main Screen Background */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-lg border-2 border-border shadow-lg">
-                                  {/* Content Area (left half) */}
-                                  <div className="absolute left-0 top-0 bottom-0 w-1/2 flex items-center justify-center">
-                                    <div className="text-[8px] text-muted-foreground/30 text-center font-medium">Content</div>
-                                  </div>
+                              {/* Portrait Screen Container (Dynamic aspect ratio based on resolution) */}
+                              {(() => {
+                                const sw = (screen as any)?.screenWidth || 1080;
+                                const sh = (screen as any)?.screenHeight || 1920;
+                                const isPortrait = sh > sw;
+                                const refWidth = isPortrait ? 360 : 640;
+                                
+                                // Relative width of drawer (300dp / refWidth dp)
+                                const relDrawerW = (300 / refWidth) * 100;
+                                
+                                return (
+                                  <div className="relative w-full mx-auto" style={{ aspectRatio: `${sw}/${sh}`, maxWidth: '220px' }}>
+                                    {/* Main Screen Background */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg border-2 border-slate-700 shadow-2xl overflow-hidden">
+                                      {/* Content Area (Behind/Left of Drawer) */}
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="text-[10px] text-slate-600 text-center font-bold tracking-tighter opacity-20 uppercase">Main Playlist Area</div>
+                                      </div>
 
-                                  {/* Flow Drawer (right half) */}
-                                  <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-black/95 rounded-r-lg p-1.5 shadow-xl">
-                                    {(() => {
-                                      const slotCount = formData.flowDrawerSlotCount;
-
-                                      return (
-                                        <div
-                                          className="w-full h-full"
-                                          style={{
-                                            display: 'grid',
-                                            gridTemplateRows: `repeat(${slotCount}, 1fr)`,
-                                            gap: '4px'
-                                          }}
-                                        >
-                                          {/* Render all slots in order */}
-                                          {formData.flowDrawerSlots.map((slot, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="w-full rounded overflow-hidden bg-gray-800/50 border border-gray-700/50 transition-all hover:border-gray-600"
-                                              style={{ minHeight: '40px' }}
-                                            >
-                                              {slot.preview ? (
-                                                <img
-                                                  src={slot.preview}
-                                                  alt={`Slot ${idx + 1}`}
-                                                  className="w-full h-full object-cover"
-                                                />
-                                              ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px] font-medium">
-                                                  Slot {idx + 1}
-                                                </div>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
+                                      {/* Real Dynamic Flow Drawer - positioned on the right */}
+                                      <div 
+                                        className="absolute right-0 top-0 bottom-0 bg-black/90 backdrop-blur-md p-2 shadow-2xl flex flex-col gap-2"
+                                        style={{ width: `${relDrawerW}%` }}
+                                      >
+                                        {formData.flowDrawerSlots.map((slot, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="w-full rounded-md overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5"
+                                            style={{ flex: 1 }}
+                                          >
+                                            {slot.preview ? (
+                                              <img
+                                                src={slot.preview}
+                                                alt={`Slot ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center text-white/20">
+                                                <span className="text-[8px] font-mono">#{idx + 1}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
+                                );
+                              })()}
 
                               {/* Preview Info */}
                               <div className="space-y-2 pt-2 border-t">

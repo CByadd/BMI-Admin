@@ -11,9 +11,10 @@ interface UploadMediaModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUploadSuccess: () => void;
+  folderId?: string;
 }
 
-export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess }: UploadMediaModalProps) => {
+export const UploadMediaModal = ({ open, onOpenChange, onUploadSuccess, folderId }: UploadMediaModalProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
@@ -134,6 +135,10 @@ const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB
 
       if (tags) {
         formData.append('tags', tags);
+      }
+
+      if (folderId) {
+        formData.append('folderId', folderId);
       }
 
       // Upload to server

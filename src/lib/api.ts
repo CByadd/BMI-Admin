@@ -41,6 +41,17 @@ export const API_ENDPOINTS = {
     UPLOAD: '/api/media/upload',
     GET_ALL: '/api/media',
     DELETE: '/api/media/delete',
+    MOVE: '/api/media/move',
+    BULK_DELETE: '/api/media/bulk-delete',
+    BULK_MOVE: '/api/media/bulk-move',
+  },
+
+  // Media folders
+  FOLDERS: {
+    GET_ALL: '/api/folders',
+    CREATE: '/api/folders',
+    UPDATE: (id: string) => `/api/folders/${id}`,
+    DELETE: (id: string) => `/api/folders/${id}`,
   },
 
   // Playlists
@@ -241,10 +252,33 @@ export const api = {
       setLoading(false);
     }
   },
-  getAllMedia: () => apiRequest('GET', API_ENDPOINTS.MEDIA.GET_ALL),
+  getAllMedia: (folderId?: string) => {
+    const query = folderId ? `?folderId=${folderId}` : '';
+    return apiRequest('GET', `${API_ENDPOINTS.MEDIA.GET_ALL}${query}`);
+  },
   deleteMedia: async (id: string, publicId: string, resourceType?: string) => {
     return apiRequest('DELETE', API_ENDPOINTS.MEDIA.DELETE, { publicId, resourceType });
   },
+  moveMedia: async (mediaId: string, folderId: string | null) => {
+    return apiRequest('POST', API_ENDPOINTS.MEDIA.MOVE, { mediaId, folderId });
+  },
+  bulkDeleteMedia: async (ids: string[]) => {
+    return apiRequest('POST', API_ENDPOINTS.MEDIA.BULK_DELETE, { ids });
+  },
+  bulkMoveMedia: async (ids: string[], folderId: string | null) => {
+    return apiRequest('POST', API_ENDPOINTS.MEDIA.BULK_MOVE, { ids, folderId });
+  },
+
+  // Folders
+  getFolders: (parentId?: string) => {
+    const energy = parentId ? `?parentId=${parentId}` : '';
+    return apiRequest<{ ok: boolean; folders: any[] }>('GET', `${API_ENDPOINTS.FOLDERS.GET_ALL}${energy}`);
+  },
+  createFolder: (name: string, parentId?: string) =>
+    apiRequest('POST', API_ENDPOINTS.FOLDERS.CREATE, { name, parentId }),
+  updateFolder: (id: string, name: string, parentId?: string) =>
+    apiRequest('PUT', API_ENDPOINTS.FOLDERS.UPDATE(id), { name, parentId }),
+  deleteFolder: (id: string) => apiRequest('DELETE', API_ENDPOINTS.FOLDERS.DELETE(id)),
 
   // Playlists
   getAllPlaylists: () => apiRequest('GET', API_ENDPOINTS.PLAYLISTS.GET_ALL),

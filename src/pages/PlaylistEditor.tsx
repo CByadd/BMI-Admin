@@ -20,7 +20,10 @@ import {
   Search,
   FileVideo,
   FileImage,
-  Sparkles
+  Sparkles,
+  Folder,
+  Home,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
@@ -49,6 +52,12 @@ const PlaylistEditor = () => {
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
   const [draggedMedia, setDraggedMedia] = useState<SlotMedia | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
+  const [sidePanelFolderStack, setSidePanelFolderStack] = useState<{ id: string | undefined; name: string }[]>([]);
+  const [sidePanelFolders, setSidePanelFolders] = useState<any[]>([]);
+
+  const currentPanelFolder = useMemo(() => 
+    sidePanelFolderStack.length > 0 ? sidePanelFolderStack[sidePanelFolderStack.length - 1] : null
+  , [sidePanelFolderStack]);
 
   // Ensure mediaLibrary is always an array using useMemo
   const safeMediaLibrary = useMemo(() => {
@@ -80,8 +89,22 @@ const PlaylistEditor = () => {
     } else {
       setLoading(false);
     }
-    loadMediaLibrary();
   }, [id]);
+
+  useEffect(() => {
+    loadSidePanelContent();
+  }, [currentPanelFolder?.id, searchQuery]);
+
+  const loadSidePanelContent = async () => {
+    try {
+      setLoadingMedia(true);
+      await Promise.all([loadMediaLibrary(), loadFolders()]);
+    } catch (error) {
+       console.error(error);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
 
   const loadPlaylist = async () => {
     try {
@@ -106,10 +129,25 @@ const PlaylistEditor = () => {
     }
   };
 
+  const loadFolders = async () => {
+    try {
+      if (searchQuery) {
+         setSidePanelFolders([]);
+         return;
+      }
+      const response = await api.getFolders(currentPanelFolder?.id) as { ok: boolean; folders: any[] };
+      if (response && response.ok) {
+        setSidePanelFolders(response.folders || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadMediaLibrary = async () => {
     try {
-      setLoadingMedia(true);
-      const response = await api.getAllMedia();
+      const folderId = searchQuery ? 'all' : currentPanelFolder?.id;
+      const response = await api.getAllMedia(folderId);
 
       let media = [];
       if (Array.isArray(response)) {
@@ -131,9 +169,19 @@ const PlaylistEditor = () => {
         variant: "destructive",
       });
       setMediaLibrary([]);
-    } finally {
-      setLoadingMedia(false);
     }
+  };
+
+  const navigateToSidePanelFolder = (id: string, name: string) => {
+    setSidePanelFolderStack(prev => [...prev, { id, name }]);
+  };
+
+  const navigateToSidePanelRoot = () => {
+    setSidePanelFolderStack([]);
+  };
+
+  const navigateToSidePanelIndex = (index: number) => {
+    setSidePanelFolderStack(prev => prev.slice(0, index + 1));
   };
 
   const handleMediaAdd = useCallback((slotNumber: number, media: SlotMedia) => {
@@ -544,26 +592,61 @@ const PlaylistEditor = () => {
                 </div>
               </div>
 
+              {/* Panel Breadcrumbs */}
+              {sidePanelFolderStack.length > 0 && !searchQuery && (
+                <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-1 overflow-x-auto text-[10px] whitespace-nowrap scrollbar-hide">
+                  <Button variant="ghost" size="sm" className="h-6 px-1 text-muted-foreground hover:text-primary" onClick={navigateToSidePanelRoot}>
+                    <Home className="w-3 h-3" />
+                  </Button>
+                  {sidePanelFolderStack.map((folder, index) => (
+                    <div key={folder.id} className="flex items-center gap-1">
+                      <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/50" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-6 px-1 ${index === sidePanelFolderStack.length - 1 ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => navigateToSidePanelIndex(index)}
+                        disabled={index === sidePanelFolderStack.length - 1}
+                      >
+                        {folder.name}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Media Grid */}
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                 {loadingMedia ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
-                ) : filteredMedia.length === 0 ? (
+                ) : (filteredMedia.length === 0 && sidePanelFolders.length === 0) ? (
                   <div className="text-center py-12">
                     <Image className="w-12 h-12 mx-auto mb-3 opacity-30 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
-                      {searchQuery ? "No media found" : "No media available"}
+                      {searchQuery ? "No results found" : "This folder is empty"}
                     </p>
-                    {!searchQuery && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upload from Media page
-                      </p>
-                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 pb-8">
+                    {/* Folder Cards */}
+                    {!searchQuery && sidePanelFolders.map((folder) => (
+                      <Card
+                        key={folder.id}
+                        className="group p-3 cursor-pointer hover:border-primary/50 transition-all flex flex-col items-center justify-center gap-2 bg-muted/20 border-border/50 hover:bg-muted/40 shadow-none hover:shadow-sm"
+                        onClick={() => navigateToSidePanelFolder(folder.id, folder.name)}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Folder className="w-6 h-6 text-primary" />
+                        </div>
+                        <span className="text-[10px] font-medium truncate w-full text-center text-muted-foreground group-hover:text-foreground">
+                          {folder.name}
+                        </span>
+                      </Card>
+                    ))}
+
+                    {/* Media Cards */}
                     {filteredMedia.map((media) => {
                       const isImage = media.type === 'image' || media.resource_type === 'image';
                       const isVideo = media.type === 'video' || media.resource_type === 'video';

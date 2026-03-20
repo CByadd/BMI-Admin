@@ -25,6 +25,8 @@ interface Screen {
   paymentAmount: number | null;
   playlistId: string | null;
   flowDrawerEnabled: boolean;
+  screenWidth?: number;
+  screenHeight?: number;
 }
 
 interface Playlist {
@@ -162,6 +164,8 @@ const transformPlayerToScreen = (player: any): Screen => {
     paymentAmount: player.paymentAmount !== null && player.paymentAmount !== undefined ? player.paymentAmount : null,
     playlistId: player.playlistId || null,
     flowDrawerEnabled: player.flowDrawerEnabled !== null && player.flowDrawerEnabled !== undefined ? player.flowDrawerEnabled : true,
+    screenWidth: player.screenWidth,
+    screenHeight: player.screenHeight,
   };
 };
 
