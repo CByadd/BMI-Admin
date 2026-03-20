@@ -25,7 +25,7 @@ interface Playlist {
   description?: string;
 }
 
-const FLOW_DRAWER_WIDTH_FRACTION = 0.37;
+const FLOW_DRAWER_WIDTH_FRACTION = 0.45;
 
 const getFlowDrawerMetrics = (screenWidth: number, screenHeight: number, slotCount: number) => {
   const safeWidth = Math.max(1, screenWidth || 1080);
