@@ -25,6 +25,26 @@ interface Playlist {
   description?: string;
 }
 
+const FLOW_DRAWER_WIDTH_FRACTION = 0.37;
+
+const getFlowDrawerMetrics = (screenWidth: number, screenHeight: number, slotCount: number) => {
+  const safeWidth = Math.max(1, screenWidth || 1080);
+  const safeHeight = Math.max(1, screenHeight || 1920);
+  const safeSlotCount = Math.max(1, slotCount || 2);
+  const drawerWidth = safeWidth * FLOW_DRAWER_WIDTH_FRACTION;
+  const slotHeight = safeHeight / safeSlotCount;
+  const aspectRatio = drawerWidth / slotHeight;
+
+  return {
+    drawerWidth,
+    slotHeight,
+    aspectRatio,
+    aspectRatioLabel: aspectRatio >= 1
+      ? `${aspectRatio.toFixed(2)} : 1`
+      : `1 : ${(1 / aspectRatio).toFixed(2)}`,
+  };
+};
+
 const ScreenEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -1275,10 +1295,7 @@ const ScreenEdit = () => {
                         const sw = (screen as any)?.screenWidth || 1080;
                         const sh = (screen as any)?.screenHeight || 1920;
                         const isPortrait = sh > sw;
-                        const drawerW = sw / 2;
-                        const slotW = drawerW;
-                        const slotH = (sh) / formData.flowDrawerSlotCount;
-                        const ratio = slotW / slotH;
+                        const metrics = getFlowDrawerMetrics(sw, sh, formData.flowDrawerSlotCount);
 
                         return (
                           <div className="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
@@ -1292,18 +1309,30 @@ const ScreenEdit = () => {
                               <div>
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Perfect Aspect Ratio</p>
                                 <p className="text-sm font-bold text-foreground">
-                                  {ratio > 1 ? `${ratio.toFixed(2)} : 1` : `1 : ${(1/ratio).toFixed(2)}`}
+                                  {metrics.aspectRatioLabel}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Recommended Dimensions</p>
                                 <p className="text-sm font-bold text-foreground">
-                                  {Math.round(slotW)} x {Math.round(slotH)} px
+                                  {Math.round(metrics.drawerWidth)} x {Math.round(metrics.slotHeight)} px
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Drawer Width</p>
+                                <p className="text-sm font-bold text-foreground">
+                                  {Math.round(FLOW_DRAWER_WIDTH_FRACTION * 100)}% of screen
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Best For</p>
+                                <p className="text-sm font-bold text-foreground">
+                                  Slot-matched portrait artwork
                                 </p>
                               </div>
                             </div>
                             <p className="text-[10px] text-muted-foreground italic border-t pt-2">
-                              * Drawer width is now 50% of the screen width.
+                              * Upload each slot image in this ratio for a clean edge-to-edge fit inside the drawer.
                             </p>
                           </div>
                         );
@@ -1404,10 +1433,7 @@ const ScreenEdit = () => {
                                           aspectRatio: (() => {
                                             const sw = (screen as any)?.screenWidth || 1080;
                                             const sh = (screen as any)?.screenHeight || 1920;
-                                            const drawerW = sw / 2;
-                                            const slotW = drawerW;
-                                            const slotH = sh / formData.flowDrawerSlotCount;
-                                            return slotW / slotH;
+                                            return getFlowDrawerMetrics(sw, sh, formData.flowDrawerSlotCount).aspectRatio;
                                           })()
                                         }}
                                       >
@@ -1462,10 +1488,7 @@ const ScreenEdit = () => {
                                           aspectRatio: (() => {
                                             const sw = (screen as any)?.screenWidth || 1080;
                                             const sh = (screen as any)?.screenHeight || 1920;
-                                            const drawerW = sw / 2;
-                                            const slotW = drawerW;
-                                            const slotH = sh / formData.flowDrawerSlotCount;
-                                            return slotW / slotH;
+                                            return getFlowDrawerMetrics(sw, sh, formData.flowDrawerSlotCount).aspectRatio;
                                           })()
                                         }}
                                       >
@@ -1658,14 +1681,10 @@ const ScreenEdit = () => {
                               {(() => {
                                 const sw = (screen as any)?.screenWidth || 1080;
                                 const sh = (screen as any)?.screenHeight || 1920;
-                                const isPortrait = sh > sw;
-                                const refWidth = isPortrait ? 360 : 640;
-                                
-                                // Relative width of drawer (300dp / refWidth dp)
-                                const relDrawerW = (300 / refWidth) * 100;
+                                const metrics = getFlowDrawerMetrics(sw, sh, formData.flowDrawerSlotCount);
                                 
                                 return (
-                                  <div className="relative w-full mx-auto" style={{ aspectRatio: `${sw}/${sh}`, maxWidth: '220px' }}>
+                                  <div className="relative w-full mx-auto" style={{ aspectRatio: `${sw}/${sh}`, maxWidth: '240px' }}>
                                     {/* Main Screen Background */}
                                     <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg border-2 border-slate-700 shadow-2xl overflow-hidden">
                                       {/* Content Area (Behind/Left of Drawer) */}
@@ -1676,7 +1695,7 @@ const ScreenEdit = () => {
                                       {/* Real Dynamic Flow Drawer - positioned on the right */}
                                       <div 
                                         className="absolute right-0 top-0 bottom-0 bg-black/90 backdrop-blur-md p-2 shadow-2xl flex flex-col gap-2"
-                                        style={{ width: `${relDrawerW}%` }}
+                                        style={{ width: `${FLOW_DRAWER_WIDTH_FRACTION * 100}%` }}
                                       >
                                         {formData.flowDrawerSlots.map((slot, idx) => (
                                           <div
@@ -1705,6 +1724,13 @@ const ScreenEdit = () => {
 
                               {/* Preview Info */}
                               <div className="space-y-2 pt-2 border-t">
+                                {(() => {
+                                  const sw = (screen as any)?.screenWidth || 1080;
+                                  const sh = (screen as any)?.screenHeight || 1920;
+                                  const metrics = getFlowDrawerMetrics(sw, sh, formData.flowDrawerSlotCount);
+
+                                  return (
+                                    <>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">Slots configured:</span>
                                   <span className="font-semibold">{formData.flowDrawerSlotCount}</span>
@@ -1715,6 +1741,20 @@ const ScreenEdit = () => {
                                     {formData.flowDrawerSlots.filter(s => s.url || s.file).length} / {formData.flowDrawerSlotCount}
                                   </span>
                                 </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Drawer width:</span>
+                                  <span className="font-semibold">{Math.round(metrics.drawerWidth)} px</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Per-slot target:</span>
+                                  <span className="font-semibold">{Math.round(metrics.drawerWidth)} x {Math.round(metrics.slotHeight)} px</span>
+                                </div>
+                                <div className="rounded-md bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+                                  Recommended artwork ratio: <span className="font-semibold text-foreground">{metrics.aspectRatioLabel}</span>
+                                </div>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </CardContent>
                           </Card>
