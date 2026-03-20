@@ -486,8 +486,23 @@ const PlaylistEditor = () => {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                            <FileVideo className="w-12 h-12 text-muted-foreground" />
+                          <div className="w-full h-full bg-black flex items-center justify-center overflow-hidden">
+                            <video
+                              src={`${slot.url}#t=0.1`}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                              crossOrigin="anonymous"
+                              onMouseEnter={(e) => e.currentTarget.play()}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.pause();
+                                e.currentTarget.currentTime = 0.1;
+                              }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity bg-black/10">
+                              <FileVideo className="w-10 h-10 text-white/50" />
+                            </div>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -681,8 +696,23 @@ const PlaylistEditor = () => {
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                                <FileVideo className="w-6 h-6 text-muted-foreground" />
+                              <div className="w-full h-full bg-black flex items-center justify-center overflow-hidden">
+                                <video
+                                  src={`${media.url || media.secure_url}#t=0.1`}
+                                  className="w-full h-full object-cover"
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  crossOrigin="anonymous"
+                                  onMouseEnter={(e) => e.currentTarget.play()}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.pause();
+                                    e.currentTarget.currentTime = 0.1;
+                                  }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity bg-black/10">
+                                  <FileVideo className="w-6 h-6 text-white/50" />
+                                </div>
                               </div>
                             )}
                             <div className="absolute top-1 right-1">

@@ -155,8 +155,23 @@ export const PlaylistSlot = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <FileVideo className="w-12 h-12 text-muted-foreground" />
+              <div className="w-full h-full bg-black flex items-center justify-center overflow-hidden group">
+                <video
+                  src={`${media.url}#t=0.1`}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  crossOrigin="anonymous"
+                  onMouseEnter={(e) => e.currentTarget.play()}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.pause();
+                    e.currentTarget.currentTime = 0.1;
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity bg-black/10">
+                  <FileVideo className="w-10 h-10 text-white/50" />
+                </div>
               </div>
             )}
             <Button
