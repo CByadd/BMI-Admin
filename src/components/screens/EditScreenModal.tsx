@@ -232,9 +232,11 @@ const EditScreenModal = ({ open, onOpenChange, screen, onSave }: EditScreenModal
     setIsUploadingLogo(true);
     try {
       const response = await api.uploadLogo(screen.id, logoFile);
-      if (response.ok) {
-        setLogoUrl(response.logoUrl);
-        setLogoPreview(response.logoUrl);
+      const uploadedLogoUrl = response?.logoUrl || response?.player?.logoUrl || null;
+
+      if (response?.ok || uploadedLogoUrl) {
+        setLogoUrl(uploadedLogoUrl);
+        setLogoPreview(uploadedLogoUrl);
         setLogoFile(null);
         toast({
           title: "Success",

@@ -328,8 +328,10 @@ const ScreenEdit = () => {
     }
   };
 
-  const handleLogoUpload = async () => {
-    if (!logoFile || !id) {
+  const handleLogoUpload = async (fileToUpload?: File) => {
+    const selectedLogoFile = fileToUpload ?? logoFile;
+
+    if (!selectedLogoFile || !id) {
       toast({
         title: "No file selected",
         description: "Please select a logo file to upload",
@@ -347,14 +349,16 @@ const ScreenEdit = () => {
     }, 200);
 
     try {
-      const response = await api.uploadLogo(id, logoFile);
+      const response = await api.uploadLogo(id, selectedLogoFile);
       clearInterval(progressInterval);
       setLogoUploadProgress(100);
 
-      if (response.ok) {
+      const uploadedLogoUrl = response?.logoUrl || response?.player?.logoUrl || null;
+
+      if (response?.ok || uploadedLogoUrl) {
         setTimeout(() => {
-          setLogoUrl(response.logoUrl);
-          setLogoPreview(response.logoUrl);
+          setLogoUrl(uploadedLogoUrl);
+          setLogoPreview(uploadedLogoUrl);
           setLogoFile(null);
           setIsUploadingLogo(false);
           setLogoUploadProgress(0);
@@ -438,11 +442,6 @@ const ScreenEdit = () => {
         });
         setIsSaving(false);
         return;
-      }
-
-      // Upload logo first if a new file is selected
-      if (logoFile) {
-        await handleLogoUpload();
       }
 
       // Update screen configuration via API (without flowType - it's static)
@@ -1166,7 +1165,7 @@ const ScreenEdit = () => {
 
                               // Auto-upload immediately
                               if (!id) return;
-                              await handleLogoUpload();
+                              await handleLogoUpload(file);
 
                               e.target.value = ''; // Reset input for re-upload
                             }}
