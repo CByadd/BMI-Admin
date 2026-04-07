@@ -156,6 +156,7 @@ export const api = {
     flowDrawerEnabled?: boolean;
     flowDrawerSlotCount?: number;
     hideScreenId?: boolean;
+    hideAppMargin?: boolean;
     smsEnabled?: boolean;
     smsLimitPerScreen?: number | null;
     resetSmsCount?: boolean;
@@ -325,4 +326,3 @@ export const api = {
 };
 
 export default api;
-

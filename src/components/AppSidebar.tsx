@@ -124,7 +124,7 @@ export function AppSidebar() {
         <SidebarHeader className="px-3 py-6 border-b border-border/50">
           <div className={`flex items-center ${isCollapsed ? "justify-center" : "px-1"}`}>
             <img
-              src="https://well2day.in/assets/img/Group%202325.png"
+              src="https://storage.googleapis.com/gpt-engineer-file-uploads/zKZOdDbOZrdjeJBnwIk8jC0KhyB2/uploads/1761858491287-well 2 day logo .jpg"
               className={`${isCollapsed ? "h-9 w-9" : "h-11 w-11"} object-contain flex-shrink-0 transition-all`}
               alt="logo"
             />

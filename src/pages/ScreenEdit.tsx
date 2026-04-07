@@ -56,6 +56,7 @@ const ScreenEdit = () => {
 
   // Find screen from context
   const screen = screens?.find(s => s.id === id);
+  const isF2 = (screen?.flowType ?? "").toString().toLowerCase() === "f2";
 
   const [formData, setFormData] = useState({
     name: screen?.name || "",
@@ -71,6 +72,7 @@ const ScreenEdit = () => {
     flowDrawerSlotCount: 2,
     flowDrawerSlots: [] as Array<{ url: string | null; file: File | null; preview: string | null }>,
     hideScreenId: false,
+    hideAppMargin: false,
     smsEnabled: false,
     smsLimitPerScreen: null as number | null,
     smsSentCount: 0,
@@ -189,6 +191,7 @@ const ScreenEdit = () => {
           flowDrawerSlotCount: slotCount,
           flowDrawerSlots: flowDrawerSlots,
           hideScreenId: player.hideScreenId !== undefined ? player.hideScreenId : false,
+          hideAppMargin: (player as any).hideAppMargin === true,
           smsEnabled: (player as any).smsEnabled === true,
           smsLimitPerScreen: (player as any).smsLimitPerScreen != null ? Number((player as any).smsLimitPerScreen) : null,
           smsSentCount: (player as any).smsSentCount != null ? Number((player as any).smsSentCount) : 0,
@@ -220,6 +223,7 @@ const ScreenEdit = () => {
           flowDrawerSlotCount: 2,
           flowDrawerSlots: [{ url: null, file: null, preview: null }, { url: null, file: null, preview: null }],
           hideScreenId: false,
+          hideAppMargin: false,
         });
         setLogoUrl(null);
         setLogoPreview(null);
@@ -242,6 +246,7 @@ const ScreenEdit = () => {
         flowDrawerSlotCount: 2,
         flowDrawerSlots: [{ url: null, file: null, preview: null }, { url: null, file: null, preview: null }],
         hideScreenId: false,
+        hideAppMargin: false,
         smsEnabled: false,
         smsLimitPerScreen: null,
         smsSentCount: 0,
@@ -448,7 +453,6 @@ const ScreenEdit = () => {
       // Include playlistId and date range in the update
       const playlistIdToSend = formData.playlistId && formData.playlistId !== "none" ? formData.playlistId : null;
 
-      const isF2 = (screen?.flowType ?? "").toString().toLowerCase() === "f2";
       // Prepare date values - always send them (null if not set). Omit paymentAmount for F2 (not used).
       const configPayload: any = {
         deviceName: formData.name,
@@ -460,6 +464,7 @@ const ScreenEdit = () => {
         flowDrawerEnabled: formData.flowDrawerEnabled,
         flowDrawerSlotCount: formData.flowDrawerSlotCount || 2, // Ensure we always send a value
         hideScreenId: formData.hideScreenId,
+        ...(isF2 ? { hideAppMargin: formData.hideAppMargin } : {}),
         smsEnabled: formData.smsEnabled,
         smsLimitPerScreen: formData.smsLimitPerScreen !== null && formData.smsLimitPerScreen !== undefined ? formData.smsLimitPerScreen : null,
         whatsappEnabled: formData.whatsappEnabled,
@@ -808,6 +813,22 @@ const ScreenEdit = () => {
                         onCheckedChange={(checked) => setFormData({ ...formData, hideScreenId: checked })}
                       />
                     </div>
+
+                    {isF2 && (
+                      <div className="flex items-center justify-between space-x-2 py-2 border-t">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="hideAppMargin">Hide App Margin</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Remove the default outer margin around the F2 app
+                          </p>
+                        </div>
+                        <Switch
+                          id="hideAppMargin"
+                          checked={formData.hideAppMargin}
+                          onCheckedChange={(checked) => setFormData({ ...formData, hideAppMargin: checked })}
+                        />
+                      </div>
+                    )}
 
                     {/* Enable Screen Toggle */}
                     <div className="flex items-center justify-between space-x-2 py-2">
